@@ -1,0 +1,78 @@
+function spcpaths = spcPath(mouse, date, run, varargin)
+% spcPath generates all the path info for FLIM data
+%% Parse inputs
+p = inputParser;
+
+addOptional(p, 'server', 'nasquatch');
+addOptional(p, 'user', ''); % user name for path
+addOptional(p, 'slice', false); % Flag if data is slice
+addOptional(p, 'cdigit', 1); % Digits used for the "c" components in the file names (1, 2, or 3)
+
+% Unpack if needed
+if iscell(varargin) && size(varargin,1) * size(varargin,2) == 1
+    varargin = varargin{:};
+end
+
+parse(p, varargin{:});
+p = p.Results;
+
+%% Clean up inputs
+% Case and type
+mouse = upper(mouse);
+if ~ischar(date)
+    date = num2str(date);
+end
+
+%% Input files
+% Run or Slice
+if p.slice
+    RunOrSlice = 'slice';
+else
+    RunOrSlice = 'run';
+end
+
+% File path
+spcpaths.fp = sprintf('\\\\%s\\data\\2p\\%s\\%s\\%s_%s\\FLIM\\%s_%s_%s%i', p.server, ...
+    p.user, mouse, date, mouse, date, mouse, RunOrSlice, run);
+
+% Names based on the number of c digits
+cstring = sprintf('c%%0%id', p.cdigit);
+
+% Tm input file
+spcpaths.tm_in = sprintf('%s_%s_%s%i_%s_t1.asc', date, mouse, RunOrSlice, run,...
+    cstring);
+
+% Photons input file
+spcpaths.photons_in = sprintf('%s_%s_%s%i_%s_photons.asc', date, mouse, RunOrSlice, run,...
+    cstring);
+
+%% Get the c indices
+% Dir
+flist = dir(fullfile(spcpaths.fp,'*.img'));
+
+% Get the indices
+spcpaths.n = size(flist,1);
+spcpaths.cinds = 1 : spcpaths.n;
+
+%% Output files
+% File path
+spcpaths.fp_out = sprintf('\\\\%s\\data\\2p\\%s\\%s\\%s_%s\\FLIM', p.server, ...
+    p.user, mouse, date, mouse);
+
+% Tm output files
+spcpaths.tif_tm = sprintf('%s_%s_%s%i_tm.tif', date, mouse, RunOrSlice, ...
+    run);
+spcpaths.regtif_tm = sprintf('%s_%s_%s%i_tm_reg.tif', date, mouse, RunOrSlice, ...
+    run);
+
+% Photon output files
+spcpaths.tif_photons = sprintf('%s_%s_%s%i_photons.tif', date, mouse, RunOrSlice, ...
+    run);
+spcpaths.regtif_photons = sprintf('%s_%s_%s%i_photons_reg.tif', date, mouse, RunOrSlice, ...
+    run);
+
+% Mat output files
+spcpaths.mat = sprintf('%s_%s_%s%i_output.mat', date, mouse, RunOrSlice, ...
+    run);
+
+end
