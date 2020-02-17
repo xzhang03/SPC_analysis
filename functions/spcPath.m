@@ -23,6 +23,20 @@ if ~ischar(date)
     date = num2str(date);
 end
 
+% User (add yourself if needed)
+if isempty(p.user)
+    switch mouse(1:2)
+        case 'SZ'
+            p.user = 'stephen';
+        case 'AL'
+            p.user = 'andrew';
+        case 'HK'
+            p.user = 'hakan';
+        case 'YL'
+            p.user = 'yoav';
+    end
+end
+
 %% Input files
 % Run or Slice
 if p.slice
@@ -74,5 +88,8 @@ spcpaths.regtif_photons = sprintf('%s_%s_%s%i_photons_reg.tif', date, mouse, Run
 % Mat output files
 spcpaths.mat = sprintf('%s_%s_%s%i_output.mat', date, mouse, RunOrSlice, ...
     run);
+
+% Mat cross expt output file
+spcpaths.xrun_mat = sprintf('%s_%s_crossrun_output.mat', date, mouse);
 
 end
