@@ -70,8 +70,14 @@ spcpaths.cinds = 1 : spcpaths.n;
 
 %% Output files
 % File path
-spcpaths.fp_out = sprintf('\\\\%s\\data\\2p\\%s\\%s\\%s_%s\\FLIM', p.server, ...
+fp_parent = sprintf('\\\\%s\\data\\2p\\%s\\%s\\%s_%s\\FLIM', p.server, ...
     p.user, mouse, date, mouse);
+spcpaths.fp_out = fullfile(fp_parent, 'Output');
+
+% Make output folder if it doesn't exist
+if exist(fp_parent, 'dir') && ~exist(spcpaths.fp_out)
+    mkdir(spcpaths.fp_out);
+end
 
 % Tm output files
 spcpaths.tif_tm = sprintf('%s_%s_%s%i_tm.tif', date, mouse, RunOrSlice, ...

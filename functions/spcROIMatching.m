@@ -47,8 +47,9 @@ end
 
 %% IO
 % Initialize the ROIs (raw data, shifts, registered data, nICAs, areas)
-ROI_struct = struct('data_raw',[], 'data_reg', [], 'data_match', [],...
-    'shifts', [], 'nROIs', NaN, 'Areas', []);
+ROI_struct = struct('run', [], 'sections', [], 'ROI_raw',[], 'ROI_xreg', [], ...
+    'ROI_xmatch', [], 'ROI_xmatch_clean', [], 'shifts', [], 'nROIs', NaN, ...
+    'Areas', []);
 ROI_struct = repmat(ROI_struct, [length(runs), 1]);
 
 for i = 1 : length(runs)
@@ -58,30 +59,31 @@ for i = 1 : length(runs)
     
     % Load
     loaded = load(fullfile(spcpaths.fp_out, spcpaths.mat), 'icaguidata');
-    ROI_struct(i).data_raw = loaded.icaguidata.AllFilters; % ROIs
+    ROI_struct(i).run = runs(i);
+    ROI_struct(i).sections = spcpaths.cinds;
+    ROI_struct(i).ROI_raw = loaded.icaguidata.AllFilters; % ROIs
     ROI_struct(i).nROIs = length(loaded.icaguidata.CellAreas); % Number of ROIs
     ROI_struct(i).Areas = loaded.icaguidata.CellAreas; % Areas
-    ROI_struct(i).data_match = zeros(size(loaded.icaguidata.AllFilters));   
+    ROI_struct(i).ROI_xmatch = zeros(size(loaded.icaguidata.AllFilters));   
+    ROI_struct(i).ROI_xmatch_clean = ROI_struct(i).ROI_xmatch;
 end
 
 %% xy shift
 % Loop through and shift
 for i = 2 : length(runs)
     currentrun = runs(i);
-    xyshift = stackRegisterMA_RR(ROI_struct(currentrun).data_raw, ROI_struct(1).data_raw);
+    xyshift = stackRegisterMA_RR(ROI_struct(currentrun).ROI_raw, ROI_struct(1).ROI_raw);
     xyshift(:,3:4) = round(xyshift(:,3:4));
-    [ROI_struct(i).shifts, ROI_struct(i).data_reg] =...
-        stackRegisterMA_RR(ROI_struct(currentrun).data_raw, [], [], xyshift);
+    [ROI_struct(i).shifts, ROI_struct(i).ROI_xreg] =...
+        stackRegisterMA_RR(ROI_struct(currentrun).ROI_raw, [], [], xyshift);
     
     % Make sure it's rounded
-    ROI_struct(i).data_reg = round(ROI_struct(currentrun).data_reg);
+    ROI_struct(i).ROI_xreg = round(ROI_struct(currentrun).ROI_xreg);
 end
 
 % No shift for reference
 ROI_struct(1).shifts = [1 0 0 0];
-ROI_struct(1).data_reg = round(ROI_struct(1).data_raw);
-assignin('base', 'ROI_struct', ROI_struct);
-
+ROI_struct(1).ROI_xreg = round(ROI_struct(1).ROI_raw);
 
 
 %% ROI matching
@@ -91,11 +93,11 @@ ROI_cell(:,1) = num2cell(1 : ROI_struct(1).nROIs);
 
 for ROI_id = 1 : ROI_struct(1).nROIs
     % Reference ROI
-    ref_roi = ROI_struct(3).data_reg == ROI_id;
+    ref_roi = ROI_struct(3).ROI_xreg == ROI_id;
         
     for expt_id = 2 : length(runs)
         % Expt ROI
-        expt_ROI = ROI_struct(expt_id).data_reg .* ref_roi;
+        expt_ROI = ROI_struct(expt_id).ROI_xreg .* ref_roi;
         
         % Overlap ROIs
         ovROIs = unique(expt_ROI(:));
@@ -116,7 +118,7 @@ for ROI_id = 1 : ROI_struct(1).nROIs
                 % If the overlap is a significant part of the reference ROI
                 % or of the experiment ROI
                 % Label
-                ROI_struct(expt_id).data_match(ROI_struct(expt_id).data_reg == ovROIs(i)) = ROI_id;
+                ROI_struct(expt_id).ROI_xmatch(ROI_struct(expt_id).ROI_xreg == ovROIs(i)) = ROI_id;
                 
                 % Update cell
                 ROI_cell{ROI_id, expt_id} = [ROI_cell{ROI_id, expt_id}, ovROIs(i)];
@@ -125,6 +127,29 @@ for ROI_id = 1 : ROI_struct(1).nROIs
     end
 end
 
+% No matching for reference
+ROI_struct(1).ROI_xmatch = ROI_struct(1).ROI_xreg;
+
+
+%% Cleaning
+% Matrix that denotes when ROIs are dropped
+dropmat = cellfun(@isempty,ROI_cell);
+stablecells = sum(dropmat,2) == 0;
+
+% Clean ROI_cell
+ROI_cell_clean = ROI_cell(stablecells,:);
+
+% Clean ROIs
+for i = 1 : size(ROI_cell_clean)
+    id = ROI_cell_clean{i,1};
+    
+    for expt_id = 1 : length(runs)
+        % Label
+        ROI_struct(expt_id).ROI_xmatch_clean(ROI_struct(expt_id).ROI_xmatch == id) = id;
+    end
+end
+
 %% Saving
-save(fullfile(spcpaths.fp_out, spcpaths.xrun_mat), 'ROI_cell', 'ROI_struct', '-v7.3');
+save(fullfile(spcpaths.fp_out, spcpaths.xrun_mat), 'ROI_cell', 'ROI_struct',...
+    'ROI_cell_clean', '-v7.3');
 end
