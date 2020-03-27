@@ -173,7 +173,15 @@ end
     function DoneButton(~,~)
         % Output
         F = hlist.Value;
-        disp(F)        
+        fprintf('Frames selected: %s\n', num2str(F));
+        
+        % Save
+        if exist(fullfile(spcpaths.fp_out, spcpaths.mat), 'file')
+            save(fullfile(spcpaths.fp_out, spcpaths.mat), 'F', '-append');
+        else
+            save(fullfile(spcpaths.fp_out, spcpaths.mat), 'F');
+        end
+        
         
         % Close figure
         close(hfig);

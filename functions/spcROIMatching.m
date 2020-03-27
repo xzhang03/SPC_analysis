@@ -60,7 +60,7 @@ for i = 1 : length(runs)
     % Load
     loaded = load(fullfile(spcpaths.fp_out, spcpaths.mat), 'icaguidata');
     ROI_struct(i).run = runs(i);
-    ROI_struct(i).sections = spcpaths.cinds;
+    ROI_struct(i).sections = loaded.F;
     ROI_struct(i).ROI_raw = loaded.icaguidata.AllFilters; % ROIs
     ROI_struct(i).nROIs = length(loaded.icaguidata.CellAreas); % Number of ROIs
     ROI_struct(i).Areas = loaded.icaguidata.CellAreas; % Areas

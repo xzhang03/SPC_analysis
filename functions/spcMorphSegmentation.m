@@ -66,6 +66,19 @@ else
     im_photon = readtiff(fullfile(spcpaths.fp_out, spcpaths.tif_photons));
 end
 
+% Load Selected frames
+if exist(fullfile(spcpaths.fp_out, spcpaths.mat), 'file')
+    SF = load(fullfile(spcpaths.fp_out, spcpaths.mat), 'F');
+    if isfield(SF, 'F')
+        F = SF.F;
+    else
+        F = 1 : size(im_photon,3);
+    end
+else
+    F = 1 : size(im_photon,3);
+end
+
+
 %% Segmentation
 % Bin if needed
 if p.binxy > 1
@@ -73,7 +86,7 @@ if p.binxy > 1
 end
 
 % Frame to segment
-im2seg = median(im_photon, 3);
+im2seg = median(im_photon(:,:,F), 3);
 
 % Local normalize
 f_prime = im2seg - imgaussfilt(im2seg, 8);
@@ -92,5 +105,9 @@ if p.viewresults
 end
 
 %% Save
-save(fullfile(spcpaths.fp_out, spcpaths.mat), 'im2seg', 'im2seg2', 'icaguidata');
+if exist(fullfile(spcpaths.fp_out, spcpaths.mat), 'file')
+    save(fullfile(spcpaths.fp_out, spcpaths.mat), 'im2seg', 'im2seg2', 'icaguidata', 'F', '-append');
+else
+    save(fullfile(spcpaths.fp_out, spcpaths.mat), 'im2seg', 'im2seg2', 'icaguidata', 'F');
+end
 end

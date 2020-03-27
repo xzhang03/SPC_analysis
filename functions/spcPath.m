@@ -75,7 +75,7 @@ fp_parent = sprintf('\\\\%s\\data\\2p\\%s\\%s\\%s_%s\\FLIM', p.server, ...
 spcpaths.fp_out = fullfile(fp_parent, 'Output');
 
 % Make output folder if it doesn't exist
-if exist(fp_parent, 'dir') && ~exist(spcpaths.fp_out)
+if exist(fp_parent, 'dir') && ~exist(spcpaths.fp_out, 'dir')
     mkdir(spcpaths.fp_out);
 end
 
@@ -95,7 +95,14 @@ spcpaths.regtif_photons = sprintf('%s_%s_%s%i_photons_reg.tif', date, mouse, Run
 spcpaths.mat = sprintf('%s_%s_%s%i_output.mat', date, mouse, RunOrSlice, ...
     run);
 
+%% Cross-expt output file
 % Mat cross expt output file
 spcpaths.xrun_mat = sprintf('%s_%s_crossrun_output.mat', date, mouse);
+
+% Ref image output file
+spcpaths.ROI_ref = sprintf('%s_%s_ROIRefs.tif', date, mouse);
+
+% Csv tm output file
+spcpaths.xruntm_csv = sprintf('%s_%s_tm.csv', date, mouse);
 
 end

@@ -16,13 +16,20 @@ addOptional(p, 'binxy', 1);
 % Start with registered or unregistered data
 addOptional(p, 'useregistered', true);
 
-% Which sections to use (if not specified, it will be corrected to 2 : end
-% below.
+% Which sections to use
+addOptional(p, 'nsections', 5);
 addOptional(p, 'sections', []);
 
 % Pick datasets
 addOptional(p, 'dophotons', true); % Photon count
 addOptional(p, 'dotm', true); % Mean lifetime
+addOptional(p, 'plottm', true); % Make a plot in the end on tm data
+
+% Save REF ROI
+addOptional(p, 'saverefim', true);
+
+% Save cross-run tm csv
+addOptional(p, 'savexruntm', true);
 
 % Unpack if needed
 if iscell(varargin) && size(varargin,1) * size(varargin,2) == 1
@@ -54,6 +61,9 @@ if isempty(p.user)
     end
 end
 
+% If not doing tm, not plotting tm
+p.plottm = p.plottm & p.dotm;
+
 %% IO
 % Get paths (run number does not matter)
 spcpaths = spcPath(mouse, date, 0, 'server', p.server, 'user', p.user,...
@@ -62,8 +72,8 @@ spcpaths = spcPath(mouse, date, 0, 'server', p.server, 'user', p.user,...
 % Load
 load(fullfile(spcpaths.fp_out, spcpaths.xrun_mat), 'ROI_cell_clean', 'ROI_struct');
 
-% Get the sections from the first experiment.
-nsections = length(ROI_struct(1).sections);
+% Get the number of sections
+nsections = p.nsections;
 
 % Throw out the first section if
 % p.sections is unspecified (First section contains frames where the
@@ -138,14 +148,17 @@ for run_ind = 1 : length(runs)
         im_tm = binxy(im_tm, p.binxy);
     end
     
-    % Apply shifts for xrun registration
-    if p.dophotons
-        [~,im_photon] = stackRegisterMA_RR(im_photon, [], [], ...
-            ones(size(im_photon,3),1) * ROI_struct(run_ind).shifts);
-    end
-    if p.dotm
-        [~,im_tm] = stackRegisterMA_RR(im_tm, [], [], ...
-            ones(size(im_tm,3),1) * ROI_struct(run_ind).shifts);
+    % Apply shifts for xrun registration (does not exist for manual
+    % matching)
+    if ~isempty(ROI_struct(run_ind).shifts)
+        if p.dophotons
+            [~,im_photon] = stackRegisterMA_RR(im_photon, [], [], ...
+                ones(size(im_photon,3),1) * ROI_struct(run_ind).shifts);
+        end
+        if p.dotm
+            [~,im_tm] = stackRegisterMA_RR(im_tm, [], [], ...
+                ones(size(im_tm,3),1) * ROI_struct(run_ind).shifts);
+        end
     end
     
     % Apply filters
@@ -173,12 +186,16 @@ for run_ind = 1 : length(runs)
         end
     end
     
+    % Find useful sections (not blurry or specified as not used here)
+    sections_to_use = intersect(p.sections, ROI_struct(run_ind).sections);
+    
     % Save data
     if p.dophotons
         % Update structure
         ROI_struct(run_ind).photon_stack = im_photon;
+        ROI_struct(run_ind).photon_stack_med = median(im_photon(:,:,sections_to_use), 3);
         ROI_struct(run_ind).photon_mat = photon_data_mat;
-        ROI_struct(run_ind).photon_vec = mean(photon_data_mat(:, p.sections + 1),2);
+        ROI_struct(run_ind).photon_vec = mean(photon_data_mat(:, sections_to_use + 1),2);
         
         % Collect all average data
         photon_avg_mat(:,run_ind + 1) = ROI_struct(run_ind).photon_vec;
@@ -186,12 +203,24 @@ for run_ind = 1 : length(runs)
     if p.dotm
         % Update structure
         ROI_struct(run_ind).tm_stack = im_tm;
+        ROI_struct(run_ind).tm_stack_med = median(im_tm(:,:,sections_to_use), 3);
         ROI_struct(run_ind).tm_mat = tm_data_mat;
-        ROI_struct(run_ind).tm_vec = mean(tm_data_mat(:, p.sections + 1), 2);
+        ROI_struct(run_ind).tm_vec = mean(tm_data_mat(:, sections_to_use + 1), 2);
         
         % Collect all average data
         tm_avg_mat(:,run_ind + 1) = ROI_struct(run_ind).tm_vec;
     end
+end
+
+%% Plot
+if p.plottm
+    figure
+    hold on
+    plot(1 : length(runs), tm_avg_mat(:,2:end), 'Color', [0.6 0.6 0.6]);
+    plot(1 : length(runs), mean(tm_avg_mat(:,2:end),1), 'Color', [1 0 0], 'LineWidth', 5);
+    hold off
+    xlabel('Runs')
+    ylabel('Tm (ps)')
 end
 
 %% Save to file
@@ -201,6 +230,41 @@ end
 if ~p.dotm
     tm_avg_mat = [];
 end
+
+% Save mat
 save(fullfile(spcpaths.fp_out, spcpaths.xrun_mat), 'ROI_struct', 'photon_avg_mat',...
     'tm_avg_mat', '-append')
+
+if p.saverefim
+    % Get centroids
+    centroids = regionprops(ROI_struct(1).ROI_xmatch_clean, 'Centroid');
+    cellids = cell2mat(ROI_cell_clean(:,1));
+    centroids = centroids(cellids);
+        
+    % Make rgb
+    rgb = repmat(mat2gray(ROI_struct(1).im),[1 1 3]);
+    rgb(:,:,1) = (ROI_struct(1).ROI_xmatch_clean > 0) * 0.5;
+    rgb(:,:,3) = 0;
+    rgb = imresize(rgb, p.binxy);
+    
+    % show
+    figure
+    imshow(rgb)
+    
+    hold on
+    % Loop and label
+    for i = 1 : length(cellids)
+        text(centroids(i).Centroid(1) * p.binxy, centroids(i).Centroid(2) * p.binxy,...
+            num2str(cellids(i)), 'FontSize', 14, 'Color', [1 1 1]);
+    end
+    hold off
+    
+    % Save figure
+    saveas(gcf, fullfile(spcpaths.fp_out, spcpaths.ROI_ref));
+end
+
+if p.savexruntm
+    csvwrite(fullfile(spcpaths.fp_out, spcpaths.xruntm_csv), tm_avg_mat);
+end
+
 end
