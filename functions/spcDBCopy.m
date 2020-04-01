@@ -21,6 +21,9 @@ addOptional(p, 'useregistered', true);
 addOptional(p, 'nsections', 5);
 addOptional(p, 'sections', []);
 
+% Copy local-normalized images
+addOptional(p, 'copylnimages', false);
+
 % Unpack if needed
 if iscell(varargin) && size(varargin,1) * size(varargin,2) == 1
     varargin = varargin{:};
@@ -147,6 +150,13 @@ for run = runs
     % Write tiffs
     writetiff(tm_stack_med, fullfile(destfp_full,fn_tm_out), 'double');
     writetiff(photons_stack_med, fullfile(destfp_full,fn_photons_out), 'double');
+    
+    % Write local-normalized images
+    if p.copylnimages
+        fn_ln = sprintf('%s_%s_%s%i_photons_ln.tif', date, mouse, RunOrSlice, ...
+    run);
+        writetiff(imresize(ROI_struct(run).im,4), fullfile(destfp_full,fn_ln), 'double');
+    end
    
 end
 end
