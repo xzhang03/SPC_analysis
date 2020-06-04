@@ -130,19 +130,21 @@ for run_ind = 1 : length(runs)
     % Load photon data
     if p.dophotons && p.useregistered
         % Load registered
-        im_photon = readtiff(fullfile(runpath.fp_out, runpath.regtif_photons));
+        [im_photon, nsections_photons] =...
+            readtiff(fullfile(runpath.fp_out, runpath.regtif_photons));
     elseif p.dophotons
         % Load unregistered
-        im_photon = readtiff(fullfile(runpath.fp_out, runpath.tif_photons));
+        [im_photon, nsections_photons] =...
+            readtiff(fullfile(runpath.fp_out, runpath.tif_photons));
     end
     
     % Load tm data
     if p.dotm && p.useregistered
         % Load registered
-        im_tm = readtiff(fullfile(runpath.fp_out, runpath.regtif_tm));
+        [im_tm, nsections_tm] = readtiff(fullfile(runpath.fp_out, runpath.regtif_tm));
     elseif p.dotm
         % Load unregistered
-        im_tm = readtiff(fullfile(runpath.fp_out, runpath.tif_tm));
+        [im_tm, nsections_tm] = readtiff(fullfile(runpath.fp_out, runpath.tif_tm));
     end
     
     % Bin
@@ -178,16 +180,19 @@ for run_ind = 1 : length(runs)
         currarea = sum(currfilt(:));
         
         % Replicate filter for sections
-        currfilt = repmat(currfilt, [1 1 nsections]);
+        currfilt_photons = repmat(currfilt, [1 1 nsections_photons]);
+        currfilt_tms = repmat(currfilt, [1 1 nsections_tm]);
         
         % Get photon counts
         if p.dophotons
             photon_data_mat(i, 2:end) =...
-                squeeze(sum(sum(im_photon .* currfilt, 1), 2)) / currarea;
+                vertcat(squeeze(sum(sum(im_photon .* currfilt_photons, 1), 2)) / currarea,...
+                nan(nsections - nsections_photons, 1));
         end
         if p.dotm
             tm_data_mat(i, 2:end) =...
-                squeeze(sum(sum(im_tm .* currfilt, 1), 2)) / currarea;
+                vertcat(squeeze(sum(sum(im_tm .* currfilt_tms, 1), 2)) / currarea,...
+                nan(nsections - nsections_tm, 1));
         end
     end
     
