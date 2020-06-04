@@ -16,7 +16,8 @@ addOptional(p, 'binxy', 1);
 % Start with registered or unregistered data
 addOptional(p, 'useregistered', true);
 
-% Which sections to use
+% Which sections to use (if numbers vary between experiments, use the
+% highest number)
 addOptional(p, 'nsections', 5);
 addOptional(p, 'sections', []);
 
@@ -30,6 +31,10 @@ addOptional(p, 'saverefim', true);
 
 % Save cross-run tm csv
 addOptional(p, 'savexruntm', true);
+
+% Multiple fovs (affects cross run names)
+addOptional(p, 'multifov', false);
+addOptional(p, 'fov', 1); % Specify fov
 
 % Unpack if needed
 if iscell(varargin) && size(varargin,1) * size(varargin,2) == 1
@@ -67,7 +72,7 @@ p.plottm = p.plottm & p.dotm;
 %% IO
 % Get paths (run number does not matter)
 spcpaths = spcPath(mouse, date, 0, 'server', p.server, 'user', p.user,...
-    'slice', p.slice, 'cdigit', p.cdigit);
+    'slice', p.slice, 'cdigit', p.cdigit, 'multifov', p.multifov, 'fov', p.fov);
 
 % Load
 load(fullfile(spcpaths.fp_out, spcpaths.xrun_mat), 'ROI_cell_clean', 'ROI_struct');

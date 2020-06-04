@@ -8,6 +8,10 @@ addOptional(p, 'user', ''); % user name for path
 addOptional(p, 'slice', false); % Flag if data is slice
 addOptional(p, 'cdigit', 1); % Digits used for the "c" components in the file names (1, 2, or 3)
 
+% Multiple fovs (affects cross run names)
+addOptional(p, 'multifov', false);
+addOptional(p, 'fov', 1); % Specify fov
+
 % Unpack if needed
 if iscell(varargin) && size(varargin,1) * size(varargin,2) == 1
     varargin = varargin{:};
@@ -96,13 +100,26 @@ spcpaths.mat = sprintf('%s_%s_%s%i_output.mat', date, mouse, RunOrSlice, ...
     run);
 
 %% Cross-expt output file
-% Mat cross expt output file
-spcpaths.xrun_mat = sprintf('%s_%s_crossrun_output.mat', date, mouse);
+if p.multifov
+    % Multiple fovs
+    % Mat cross expt output file
+    spcpaths.xrun_mat = sprintf('%s_%s_crossrun_output_fov%i.mat', date, mouse, p.fov);
 
-% Ref image output file
-spcpaths.ROI_ref = sprintf('%s_%s_ROIRefs.tif', date, mouse);
+    % Ref image output file
+    spcpaths.ROI_ref = sprintf('%s_%s_ROIRefs_fov%i.tif', date, mouse, p.fov);
 
-% Csv tm output file
-spcpaths.xruntm_csv = sprintf('%s_%s_tm.csv', date, mouse);
+    % Csv tm output file
+    spcpaths.xruntm_csv = sprintf('%s_%s_tm_fov%i.csv', date, mouse, p.fov);
+else
+    % Single fov
+    % Mat cross expt output file
+    spcpaths.xrun_mat = sprintf('%s_%s_crossrun_output.mat', date, mouse);
+
+    % Ref image output file
+    spcpaths.ROI_ref = sprintf('%s_%s_ROIRefs.tif', date, mouse);
+
+    % Csv tm output file
+    spcpaths.xruntm_csv = sprintf('%s_%s_tm.csv', date, mouse);
+end
 
 end

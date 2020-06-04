@@ -15,6 +15,10 @@ addOptional(p, 'cdigit', 1); % Digits used for the "c" components in the file na
 addOptional(p, 'figpos', []);
 addOptional(p, 'redalpha', 0.5);
 
+% Multiple fovs (affects cross run names)
+addOptional(p, 'multifov', false);
+addOptional(p, 'fov', 1); % Specify fov
+
 % Unpack if needed
 if iscell(varargin) && size(varargin,1) * size(varargin,2) == 1
     varargin = varargin{:};
@@ -72,7 +76,7 @@ RGB_cell = cell(length(runs),1);
 for i = 1 : length(runs)
     % Get paths
     spcpaths = spcPath(mouse, date, runs(i), 'server', p.server, 'user', p.user,...
-        'slice', p.slice, 'cdigit', p.cdigit);
+        'slice', p.slice, 'cdigit', p.cdigit, 'multifov', p.multifov, 'fov', p.fov);
     
     % Load
     loaded = load(fullfile(spcpaths.fp_out, spcpaths.mat), 'icaguidata', 'F', 'im2seg2');
@@ -110,7 +114,7 @@ for i = 1 : length(runs)
     % Figure
     hfigs{i} = figure('Position', figpos(i,:), 'name', sprintf('Run %i', i));
     hrgb{i} = imagesc(RGB_cell{i});
-    title(sprintf('Run %i', i));
+    title(sprintf('Run %i', runs(i)));
 end
 
 % Getting user input

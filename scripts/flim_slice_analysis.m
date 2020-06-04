@@ -67,9 +67,9 @@ plot([median(AKARNAcData(:,1)), median(AKARNAcData(:,1))], ylims, 'r-');
 plot(xlims, [median(AKARNAcData(:,2)), median(AKARNAcData(:,2))], 'r-');
 hold off
 xlabel('dF/F0')
-ylabel('Lifetime change (end - start)')
+ylabel('Lifetime change (ps, end - start)')
 title('AKAR @NAc Brightest cells')
-xlim(xlims);
+% xlim([-0.3 0.1]);
 ylim(ylims);
 
 subplot(1,3,2)
@@ -79,10 +79,10 @@ plot([median(cADDisNAcData(:,1)), median(cADDisNAcData(:,1))], ylims, 'r-');
 plot(xlims, [median(cADDisNAcData(:,2)), median(cADDisNAcData(:,2))], 'r-');
 hold off
 xlabel('dF/F0')
-ylabel('Lifetime change (end - start)')
+ylabel('Lifetime change (ps, end - start)')
 title('cADDis @NAc Brightest cells')
 xlim(xlims);
-ylim(ylims);
+% ylim([-100 50]);
 
 subplot(1,3,3)
 hold on
@@ -91,7 +91,7 @@ plot([median(cADDisMPOAData(:,1)), median(cADDisMPOAData(:,1))], ylims, 'r-');
 plot(xlims, [median(cADDisMPOAData(:,2)), median(cADDisMPOAData(:,2))], 'r-');
 hold off
 xlabel('dF/F0')
-ylabel('Lifetime change (end - start)')
+ylabel('Lifetime change (ps, end - start)')
 title('cADDis @MOPA Brightest cells')
 xlim(xlims);
 ylim(ylims);

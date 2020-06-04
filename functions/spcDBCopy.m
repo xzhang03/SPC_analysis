@@ -24,6 +24,10 @@ addOptional(p, 'sections', []);
 % Copy local-normalized images
 addOptional(p, 'copylnimages', false);
 
+% Multiple fovs (affects cross run names)
+addOptional(p, 'multifov', false);
+addOptional(p, 'fov', 1); % Specify fov
+
 % Unpack if needed
 if iscell(varargin) && size(varargin,1) * size(varargin,2) == 1
     varargin = varargin{:};
@@ -72,7 +76,7 @@ end
 %% IO
 % Get paths (run number does not matter)
 spcpaths = spcPath(mouse, date, 0, 'server', p.server, 'user', p.user,...
-    'slice', p.slice, 'cdigit', p.cdigit);
+    'slice', p.slice, 'cdigit', p.cdigit, 'multifov', p.multifov, 'fov', p.fov);
 
 % Load
 load(fullfile(spcpaths.fp_out, spcpaths.xrun_mat), 'ROI_struct');
@@ -118,7 +122,10 @@ copyfile(fullfile(spcpaths.fp_out, spcpaths.xrun_mat),...
 
 %% Make image files
 % Loop through runs
-for run = runs
+for ind = 1 : length(runs)
+    % Get run
+    run = runs(ind);
+    
     % Image filename (output)
     fn_tm_out = sprintf('%s_%s_%s%i_tm_med.tif', date, mouse, RunOrSlice, run);
     fn_photons_out = sprintf('%s_%s_%s%i_photons_med.tif', date, mouse, RunOrSlice, ...
@@ -137,7 +144,7 @@ for run = runs
     
     % Sections
     % Find useful sections (not blurry or specified as not used here)
-    sections_to_use = intersect(p.sections, ROI_struct(run).sections);
+    sections_to_use = intersect(p.sections, ROI_struct(ind).sections);
     
     % Read images
     tm_stack = readtiff(fullfile(spcpaths.fp_out, fn_tm_in));
@@ -155,7 +162,7 @@ for run = runs
     if p.copylnimages
         fn_ln = sprintf('%s_%s_%s%i_photons_ln.tif', date, mouse, RunOrSlice, ...
     run);
-        writetiff(imresize(ROI_struct(run).im,4), fullfile(destfp_full,fn_ln), 'double');
+        writetiff(imresize(ROI_struct(ind).im,4), fullfile(destfp_full,fn_ln), 'double');
     end
    
 end
