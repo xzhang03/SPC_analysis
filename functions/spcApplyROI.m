@@ -94,6 +94,14 @@ runs = [ROI_struct.run];
 ncells = size(ROI_cell_clean, 1);
 
 %% Photons and Tm
+% Areas
+Area_mat = zeros(ncells, length(runs) + 1);
+
+% Fill the first column with cell ID. Eventually it's cells x run. This
+% matrix records all runs
+Area_mat(:,1) = [ROI_cell_clean{:,1}];
+
+% Photons initialize
 if p.dophotons
     % Initialize
     photon_data_mat = zeros(ncells, nsections + 1);
@@ -108,6 +116,8 @@ if p.dophotons
     photon_avg_mat(:,1) = [ROI_cell_clean{:,1}];
     
 end
+
+% Tm initialize
 if p.dotm
     % Initialize
     tm_data_mat = zeros(ncells, nsections + 1);
@@ -121,6 +131,7 @@ if p.dotm
     % matrix records all runs
     tm_avg_mat(:,1) = [ROI_cell_clean{:,1}];
 end
+
 
 for run_ind = 1 : length(runs)
     % Get run path
@@ -178,6 +189,7 @@ for run_ind = 1 : length(runs)
         
         % Area
         currarea = sum(currfilt(:));
+        Area_mat(i, run_ind+1) = currarea;
         
         % Replicate filter for sections
         currfilt_photons = repmat(currfilt, [1 1 nsections_photons]);
@@ -243,7 +255,7 @@ end
 
 % Save mat
 save(fullfile(spcpaths.fp_out, spcpaths.xrun_mat), 'ROI_struct', 'photon_avg_mat',...
-    'tm_avg_mat', '-append')
+    'tm_avg_mat', 'nsections', 'Area_mat', '-append')
 
 if p.saverefim
     % Get centroids

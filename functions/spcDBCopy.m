@@ -18,7 +18,6 @@ addOptional(p, 'useregistered', true);
 
 % Which sections to use (if not specified, it will be corrected to 2 : end
 % below. If the section is deemed blurry, it will be thrown out as well
-addOptional(p, 'nsections', 5);
 addOptional(p, 'sections', []);
 
 % Copy local-normalized images
@@ -79,10 +78,7 @@ spcpaths = spcPath(mouse, date, 0, 'server', p.server, 'user', p.user,...
     'slice', p.slice, 'cdigit', p.cdigit, 'multifov', p.multifov, 'fov', p.fov);
 
 % Load
-load(fullfile(spcpaths.fp_out, spcpaths.xrun_mat), 'ROI_struct');
-
-% Get the number of sections
-nsections = p.nsections;
+load(fullfile(spcpaths.fp_out, spcpaths.xrun_mat), 'ROI_struct', 'nsections');
 
 % Throw out the first section if
 % p.sections is unspecified (First section contains frames where the
@@ -112,11 +108,19 @@ end
 copyfile(fullfile(spcpaths.fp_out, spcpaths.ROI_ref),...
     fullfile(destfp_full, spcpaths.ROI_ref))
 
+% Copy REF neuropil ROI image
+copyfile(fullfile(spcpaths.fp_out, spcpaths.ROInp_ref),...
+    fullfile(destfp_full, spcpaths.ROInp_ref))
+
 % Copy tm csv file
 copyfile(fullfile(spcpaths.fp_out, spcpaths.xruntm_csv),...
     fullfile(destfp_full, spcpaths.xruntm_csv))
 
 % Copy tm csv file
+copyfile(fullfile(spcpaths.fp_out, spcpaths.xruntmnp_csv),...
+    fullfile(destfp_full, spcpaths.xruntmnp_csv))
+
+% Copy crossrun mat file
 copyfile(fullfile(spcpaths.fp_out, spcpaths.xrun_mat),...
     fullfile(destfp_full, spcpaths.xrun_mat))
 
