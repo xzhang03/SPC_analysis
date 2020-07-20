@@ -29,6 +29,9 @@ addOptional(p, 'outterspacing', 5);% pixels after binnng
 addOptional(p, 'minpixels', 20); % Minimal number of pixels for neuropil calculations (this number is after binning)
 addOptional(p, 'excludeallROIs', true); % Exclude all ROIs or only the cleaned ROIs
 
+% Allowable pixels
+addOptional(p, 'minallowabletm', 1000); % Minimal tm value that is allowed to be considered neuropil
+
 % Calculation method
 addOptional(p, 'averaging_method', 'weighted'); % Can be 'weighted' or 'uniform'
 
@@ -173,6 +176,9 @@ for run_ind = 1 : length(runs)
         np_negative = ROI_struct(run_ind).ROI_xmatch_clean > 0;
     end
     
+    % Calculate an allowable region
+    ROI_allow = min(ROI_struct(run_ind).tm_stack, [], 3) >= p.minallowabletm;
+    
     % Loop through cells
     for cellind = 1 : size(ROI_cell_clean,1)
         % Cell id
@@ -180,7 +186,7 @@ for run_ind = 1 : length(runs)
         
         % Make neuropil
         [np, np_size] = MakeNPRing(ROI_struct(run_ind).ROI_xmatch_clean == id,...
-            p.innerspacing, p.outterspacing, np_negative, p.minpixels);
+            p.innerspacing, p.outterspacing, np_negative, ROI_allow, p.minpixels);
         Areanp_mat(cellind, run_ind + 1) = np_size;
         
         % Log neuropil

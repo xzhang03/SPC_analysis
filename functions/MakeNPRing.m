@@ -1,8 +1,8 @@
-function [np, np_size] = MakeNPRing(im, inner, outter, im_neg, minpixels)
+function [np, np_size] = MakeNPRing(im, inner, outter, im_neg, im_allow, minpixels)
 % MakeNPRing makes neurpil ring given a inner distance, a starting outter
-% distance, a negative image to subtract from, and a minimal number of
-% pixels
-% [np, np_size] = MakeNPRing(im, inner, outter, im_neg, minpixels)
+% distance, a negative image to subtract from, an image of allowable area, 
+% and a minimal number of pixels.
+% [np, np_size] = MakeNPRing(im, inner, outter, im_neg, im_allow, minpixels)
 
 % Initialize
 np_size = 0;
@@ -22,8 +22,10 @@ while np_size < minpixels
     out = strel('disk', outter);
     
     % Candidate neuropil
-    np = (imdilate(im, out) - im_in - im_neg) > 0;
+    np = ((imdilate(im, out) - im_in - im_neg) .* im_allow) > 0;
     np_size = sum(np(:));
+    disp(np_size)
+    disp(sum(sum((imdilate(im, out) - im_in - im_neg)>0)));
     
 end
 
