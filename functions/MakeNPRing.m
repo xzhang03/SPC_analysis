@@ -24,8 +24,6 @@ while np_size < minpixels
     % Candidate neuropil
     np = ((imdilate(im, out) - im_in - im_neg) .* im_allow) > 0;
     np_size = sum(np(:));
-    disp(np_size)
-    disp(sum(sum((imdilate(im, out) - im_in - im_neg)>0)));
     
 end
 
