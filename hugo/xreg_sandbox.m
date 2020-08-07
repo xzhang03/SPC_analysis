@@ -33,10 +33,12 @@ fixed = sbx;
 [optimizer,metric] = imregconfig('multimodal');
 disp('## Regular registration...')
 tform = imregtform(moving,fixed,rtype,optimizer, metric);
-disp(tform.T)
+disp('    Shifts : ')
+disp(tform.T(3,1:2))
 disp('## Phase correlation...')
 tformP = imregcorr(moving,fixed,rtype);
-disp(tformP.T)
+disp('    Shifts : ')
+disp(tformP.T(3,1:2))
 
 Rfixed = imref2d(size(fixed));
 flimReg = imwarp(moving,tform,'OutputView',Rfixed);
@@ -53,50 +55,58 @@ title('Regular registration')
 subplot(313)
 imshowpair(sbx,flimRegPhase);
 title('Phase registration')
-suptitle('Image alignment')
 
-% %% binning pixels parce qu'on sait plus quoi faire
-% sbxBinned = imresize(sbx,0.125);
-% flimBinned = imresize(flimRegPhase,0.125);
-% figure
-% imshowpair(sbxBinned,flimBinned,'montage')
-% title('Binning pixels')
 
+%% binning pixels parce qu'on sait plus quoi faire
+sbxBinned = imresize(sbx,0.125);
+flimBinned = imresize(flimRegPhase,0.125);
+sbxBinned = imresize(sbxBinned,8);
+flimBinned = imresize(flimBinned,8);
+figure
+imshowpair(sbxBinned,flimBinned,'montage')
+title('Binning pixels')
 %% Grid search init
-w_array = linspace(600, 10000, 100);
-a_array = linspace(10, 20000, 100);
+w_array = linspace(600, 10000, 50);
+a_array = linspace(10, 3000, 50);
 [A, W] = ndgrid(a_array, w_array);
 MI_grid = zeros(length(a_array), length(w_array));
 CC_grid = zeros(length(a_array), length(w_array));
 MSE_grid = zeros(length(a_array), length(w_array));
 
-% Grid search
+MI_grid_sin = zeros(length(a_array), length(w_array));
+CC_grid_sin = zeros(length(a_array), length(w_array));
+MSE_grid_sin = zeros(length(a_array), length(w_array));
+
+%% Grid search
 source_image = sbx;
 distorted = flimRegPhase;
 
 % cosine fitting
-for IDX = 1:numel(A)
+parfor IDX = 1:numel(A)
     a = A(IDX);
     w = W(IDX);
     corrected = spcDistortionCorrection(distorted, a, w);
-    MI_grid(IDX) = mi(corrected(:,[1:200,end-200:end]), source_image(:,[1:200,end-200:end]));
-    img_corr = corrcoef(corrected(:,[1:200,end-200:end]), source_image(:,[1:200,end-200:end]));
-%     MI_grid(IDX) = mi(corrected,source_image);
-%     img_corr = corrcoef(corrected,source_image);
+    MI_grid(IDX) = mi(corrected,source_image);
+    img_corr = corrcoef(corrected,source_image);
     CC_grid(IDX) = img_corr(1, 2);
-%     MSE_grid(IDX) = immse(corrected,source_image);
-    MSE_grid(IDX) = immse(corrected(:,[1:200,end-200:end]), source_image(:,[1:200,end-200:end]));
+    MSE_grid(IDX) = immse(corrected,source_image);
+    
+    corrected = spcDistortionCorrection(distorted, a, w,'sin');
+    MI_grid_sin(IDX) = mi(corrected,source_image);
+    img_corr = corrcoef(corrected,source_image);
+    CC_grid_sin(IDX) = img_corr(1, 2);
+    MSE_grid_sin(IDX) = immse(corrected,source_image);
 end
 
 %% Plot results
 figure
 subplot(121)
-heatmap(round(w_array), round(a_array), MI_grid)
+heatmap(round(w_array), round(a_array), MI_grid_sin);
 ylabel('Amplitude')
 xlabel('Period')
 title('MI')
 subplot(122)
-heatmap(round(w_array), round(a_array), CC_grid)
+heatmap(round(w_array), round(a_array), CC_grid_sin);
 ylabel('Amplitude')
 xlabel('Period')
 title('CC')
@@ -107,7 +117,7 @@ title('CC')
 % title('MSE')
 
 %%
-flimCorrected = spcDistortionCorrection(flimRegPhase,30000,7000);
+flimCorrected = spcDistortionCorrection(flimRegPhase,3000,800);
 
 figure
 % subplot(311)
