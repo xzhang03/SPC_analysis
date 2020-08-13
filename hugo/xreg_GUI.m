@@ -1,69 +1,30 @@
-clearvars -except sbx_path flim_path
-%% Loading images
+clearvars -except sbx_path flim_path x y
 
-disp('### Loading images')
-im_sbx = Tiff(sbx_path,'r');
-im_sbx = mat2gray(read(im_sbx));
-im_flim = Tiff(flim_path,'r');
-im_flim = mat2gray(read(im_flim));
+%% Loading images
+im_sbx = Tiff(sbx_path,'r'); im_sbx = mat2gray(read(im_sbx));
+im_flim = Tiff(flim_path,'r'); im_flim = mat2gray(read(im_flim));
 
 %% Cropping
-disp('### Cropping')
-w = [min(size(im_sbx,1),size(im_flim,1))-100,min(size(im_sbx,2),size(im_flim,2))-100];
-flim = center_patch(im_flim,w);
-sbx = center_patch(im_sbx,w);
+[sbx,flim] = xregCropping(im_sbx,im_flim);
 
-%% Registration
-rtype = 'translation';
-moving = flim;
-fixed = sbx;
+%% Registration - Translation
+flimReg = xregShift(sbx,flim);
 
-[optimizer,metric] = imregconfig('multimodal');
-disp('## Regular registration...')
-tform = imregtform(moving,fixed,rtype,optimizer, metric);
-disp('    Shifts : ')
-disp(tform.T(3,1:2))
-disp('## Phase correlation...')
-tformP = imregcorr(moving,fixed,rtype);
-disp('    Shifts : ')
-disp(tformP.T(3,1:2))
+%% GUI to select points
+if ~exist('y','var')
+    [x,y] = xregGetPoints(sbx,flimReg);
+end
 
-Rfixed = imref2d(size(fixed));
-flimReg = imwarp(moving,tform,'OutputView',Rfixed);
-flimRegPhase = imwarp(moving,tformP,'OutputView',Rfixed);
-
-% %% Plot output of registration
-% figure
-% subplot(311)
-% imshowpair(sbx,moving);
-% title('Initial')
-% subplot(312)
-% imshowpair(sbx,flimReg);
-% title('Regular registration')
-% subplot(313)
-% imshowpair(sbx,flimRegPhase);
-% title('Phase registration')
-
-
-%% GUI tests
+%% Fitting of the distortion
+[xq,approx] = xregFitDistortion(sbx,x,y);
 
 figure
-imshow(flimRegPhase)
+plot(x,y,'o',xq,approx,':.')
+xlim([0 size(sbx,2)])
 
-r1 = ginput(4);
-%%
-flimCorrected = spcDistortionCorrection(flimRegPhase,3000,800);
+%% Correction of the distortion
+flimCorrected = xregCorrectDistortion(sbx,flimReg,approx);
 
 figure
-% subplot(311)
-% imshowpair(sbx,flim);
-% title('initial')
-% subplot(312)
-% imshowpair(sbx,flimRegPhase);
-% title('Phase registration')
-% subplot(313)
 imshowpair(sbx,flimCorrected);
 title('Distortion corrected')
-
-%%
-plot(mean(sbx,1)-mean(flim,1))
