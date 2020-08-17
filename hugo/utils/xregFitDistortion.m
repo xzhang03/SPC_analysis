@@ -1,4 +1,4 @@
-function [xq,approx] = xregFitDistortion(sbx, x, y, fitType)
+function [xq,approx,beta] = xregFitDistortion(sbx, x, y, fitType)
 %UNTITLED6 Summary of this function goes here
 %   Detailed explanation goes here
 if nargin<4
@@ -18,6 +18,11 @@ elseif strcmp(fitType,'cos2')
 elseif strcmp(fitType,'cos')
     modelfun = @(b,x)(b(1)-b(1)*cos(1/b(2) * (x - b(3)))).*sign(x-b(3));
     beta0 = [10, 600, 300];
+    beta = nlinfit(x,y,modelfun,beta0);
+    approx=modelfun(beta,xq);
+elseif strcmp(fitType,'coscos')
+    modelfun = @(b,x)(b(1)-b(1)*cos(1/b(2) * (x - b(3))).*cos(1/b(4) * (x - b(3))).*sign(x-b(3)));
+    beta0 = [10, 600, 300,600];
     beta = nlinfit(x,y,modelfun,beta0);
     approx=modelfun(beta,xq);
 end
