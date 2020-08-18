@@ -16,7 +16,7 @@ if ~exist('y','var')
 end
 
 %% Fitting of the distortion
-[xq,approx] = xregFitDistortion(sbx,x,y);
+[xq,approx] = xregFitDistortion(sbx,x,y,'cos2');
 
 figure
 plot(x,y,'o',xq,approx,':.')
@@ -28,3 +28,24 @@ flimCorrected = xregCorrectDistortion(sbx,flimReg,approx);
 figure
 imshowpair(sbx,flimCorrected);
 title('Distortion corrected')
+
+%%
+figure
+subplot(211)
+imshowpair(sbx,flim,'montage')
+title('SBX PMT photon image and FLIM PMT photon image')
+subplot(212)
+imshowpair(sbx,flimReg)
+title('Overlayed')
+
+%%
+figure
+plot(x,y,'o',xq,approx,':.')
+xlabel('Horizontal position [pixels]')
+ylabel('Distortion amplitude [pixels]')
+xlim([0 size(sbx,2)])
+title('Fit of the measured distortion')
+%%
+figure
+imshowpair(sbx,flimCorrected)
+title('Corrected image overlayed on SBX PMT image')
