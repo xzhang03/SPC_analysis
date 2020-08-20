@@ -16,9 +16,7 @@ if ~exist('y','var')
 end
 
 %% Fitting of the distortion
-
 [xq,approx,beta,modelfun] = xregFitDistortion(sbx,x,y);
-
 
 figure
 plot(x,y,'o',xq,approx,':.')
