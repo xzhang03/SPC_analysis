@@ -1,4 +1,4 @@
-function [xq,approx,beta] = xregFitDistortion(sbx, x, y, fitType)
+function [xq,approx,beta,modelfun] = xregFitDistortion(sbx, x, y, fitType)
 %UNTITLED6 Summary of this function goes here
 %   Detailed explanation goes here
 if nargin<4
