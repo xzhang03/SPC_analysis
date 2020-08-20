@@ -25,6 +25,11 @@ elseif strcmp(fitType,'coscos')
     beta0 = [10, 600, 300,600];
     beta = nlinfit(x,y,modelfun,beta0);
     approx=modelfun(beta,xq);
+elseif strcmp(fitType,'cossin')
+    modelfun = @(b,x)(b(1)-b(1)*cos(1/b(2) * (x - b(3))).*abs(sin(1/b(2) * (x - b(3)))).*sign(x-b(3)));
+    beta0 = [10, 600, 300];
+    beta = nlinfit(x,y,modelfun,beta0);
+    approx=modelfun(beta,xq);
 end
 
 end

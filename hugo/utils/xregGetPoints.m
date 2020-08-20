@@ -8,8 +8,11 @@ end
 figure
 subplot(121)
 imshow(flimReg)
+title('FLIM')
 subplot(122)
 imshow(sbx)
+title('SBX')
+suptitle('Click on corresponding points, starting with the left image')
 [points,~] = ginput(nbpoints);
 
 yFLIM = points(1:2:nbpoints-1);
