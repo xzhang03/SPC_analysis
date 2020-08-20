@@ -18,8 +18,10 @@ im_tm = mat2gray(im_tm(:,:,cind));
 
 %% Taking mean image as sbx source
 im_sbx=mat2gray(mean(im_sbx,3));
+
 %% Cross-registration
-[flimCorrected,tform,D,sbxCropped,flimShifted] = xRegCorrect(im_sbx,im_flim,false);
+getNewPoints=false;
+[flimCorrected,tform,D,sbxCropped,flimShifted] = xRegCorrect(im_sbx,im_flim,getNewPoints);
 
 %% Show correct FLIM photon count
 figure
