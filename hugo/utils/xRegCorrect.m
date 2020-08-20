@@ -1,30 +1,37 @@
-function [flimCorrected,shifts,D] = xRegCorrect(sbx,flim,getPoints)
+function [flimCorrected,tform,D,sbxCropped,flimShifted] = xRegCorrect(sbx,flim,getPoints)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 if nargin<3
     getPoints=false;
 end
 
-[flimReg, tform] = xregShift(sbx,flim);
+%% Cropping
+margin = 100;
+[sbxCropped,flim] = xregCropping(sbx,flim,margin);
+
+%% Shifting
+[flimShifted, tform] = xregShift(sbxCropped,flim);
 shifts = tform.T(3,2:3);
-xq = 1:size(sbx,2);
+
 %% GUI to select points
 if getPoints
-    [x,y] = xregGetPoints(sbx,flimReg);
+    [x,y] = xregGetPoints(sbxCropped,flimShifted);
 end
 
 %% Fitting of the distortion
+xq = 1:size(sbxCropped,2);
+
 if getPoints
-    [~,field] = xregFitDistortion(sbx,x,y);
+    [~,field] = xregFitDistortion(sbxCropped,x,y);
 else
     saved_model = load('modelfunction.mat');
     field = saved_model.modelfun(saved_model.beta,xq);
 end
-D = zeros(size(sbx,1),size(sbx,2),2);
-D(:,:,1) = repmat(field,[size(sbx,1),1]);
+D = zeros(size(sbxCropped,1),size(sbxCropped,2),2);
+D(:,:,1) = repmat(field,[size(sbxCropped,1),1]);
 
 %% Correction of the distortion
-flimCorrected = xregCorrectDistortion(flimReg,D);
+flimCorrected = xregCorrectDistortion(flimShifted,D);
 
 end
 
