@@ -1,7 +1,7 @@
-function [x,y,yFLIM,ySBX] = xregGetPoints(sbx,flimReg,nbpoints)
+function [x, y, yFLIM, ySBX] = xregGetPoints(sbx, flimReg, nbpoints)
 %UNTITLED5 Summary of this function goes here
 %   Detailed explanation goes here
-if nargin<3
+if nargin < 3
     nbpoints = 20;
 end
 
@@ -13,13 +13,12 @@ subplot(122)
 imshow(sbx)
 title('SBX')
 suptitle('Click on corresponding points, starting with the left image')
-[points,~] = ginput(nbpoints);
+[points, ~] = ginput(nbpoints);
 
 yFLIM = points(1:2:nbpoints-1);
 ySBX = points(2:2:nbpoints);
-diffs = yFLIM-ySBX;
+diffs = yFLIM - ySBX;
 
 y = diffs(:);
 x = ySBX(:);
 end
-

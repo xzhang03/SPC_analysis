@@ -7,11 +7,10 @@ else
     form = varargin(1);
 end
 
-[~,idx] = max(mat(:));
+[~, idx] = max(mat(:));
 
-if strcmp(form,'2d')
-    [I,J] = ind2sub(size(mat),idx);
-    idx = [I,J];
+if strcmp(form, '2d')
+    [I, J] = ind2sub(size(mat), idx);
+    idx = [I, J];
 end
 end
-
