@@ -9,6 +9,7 @@ spcpaths = spcPath(mouse, date, run, 'user',user);
 inds = spcpaths.cinds;
 
 %% Loading photon and tm files
+ind = 1;
 im_photon = load(fullfile(spcpaths.fp, sprintf(spcpaths.photons_in,ind)));
 
 im_tm = load(fullfile(spcpaths.fp, sprintf(spcpaths.tm_in,ind)));
@@ -25,9 +26,9 @@ xC_initial = normxcorr2(tm,phot);
 [~, ind] = max(xC_initial(:));
 [X, Y] = ind2sub(size(xC_initial),ind);
 shifts = [size(tm,1)-X, size(tm,2)-Y];
-% figure
-% surf(xC_initial)
-% shading flat
+figure
+surf(xC_initial)
+shading flat
 
 %% cosine fitting
 w_array = ceil(size(tm,2))/2:200:200000;
@@ -37,7 +38,7 @@ a_array = 1:200:100000;
 
 MI_grid = zeros(length(w_array),length(a_array));
 corrCoeff_grid = zeros(length(w_array),length(a_array));
-binxy
+
 parfor IDX = 1:numel(A)
     a = A(IDX);
     w = W(IDX);
