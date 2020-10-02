@@ -1,10 +1,8 @@
-function bins = plot_decay(photCount)
+function plot_decay(photCount)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 
-binRef = "C:\Users\hfluhr\Documents\SPC_analysis\ExpFit\200305_SZ333_run1_c1_data_trace.asc";
-bins = load(binRef);
-bins = bins(:,1);
+bins = load_bins();
 
 ticks = 1:32:256;
 figure
