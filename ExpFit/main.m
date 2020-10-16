@@ -141,11 +141,31 @@ subplot(2,1,1)
 plotStructField(pixParams(currentImg,:,:),'Ratio')
 title('Ratio')
 subplot(2,1,2)
-plotStructField(pixParams(currentImg,:,:),'A')
+plotStructField(pixRes(currentImg,:,:),'rmse')
+title('RMSE')
 
 %%
 figure
-heatmap(pixParams
+heatmap(getFieldArray(pixParams(currentImg,:,:),'Ratio'));
+
+%% Mean arrival time for all pixels
+for acq = 1:size(fitQ,1)
+    fprintf('# Exp %d...\n',acq)
+    Im = squeeze(fitQ(acq,:,:,:));
+    sizeIm=size(Im);
+    for idx = 1:prod(sizeIm(1:2))
+        [i,j]=ind2sub(sizeIm(1:2),idx);
+        pixParams(acq,i,j).meanT =mean(squeeze(Im(i,j,:)).*bins);
+    end
+end
+disp('done')
+
+%% scatter plot
+figure
+scatter([pixParams.meanT],[pixParams.Ratio])
+xlabel('Mean Arrival Time')
+ylabel('Ratio')
+title('Ratio vs Mean Arrival Time for few frames')
 
 %% view
 dirID=1; f=50;
@@ -158,28 +178,22 @@ path =fullfile(sliceDir{dirID},currFiles.name{f});
 % path = fullfile(currFiles.folder{1},currFiles.name{1});
 %%
 % [photCount, photArrival] = read_sdt(path,binFactor);
-sdt = bfopen(path);
-outImage = cat(3,sdt{1}{:,1});
-
-% try to get mean arrival time
-A=double(squeeze(outImage));
-sizeA=size(A);
-meanT = zeros(sizeA(1:2));
-parfor idx = 1:prod(sizeA(1:2))
-    [i,j]=ind2sub(sizeA(1:2),idx);
-    meanT(idx) = mean(squeeze(A(i,j,:)).*bins);
-end
-%
-figure
-imshow(mat2gray(meanT))
+% sdt = bfopen(path);
+% outImage = cat(3,sdt{1}{:,1});
+% 
+% % try to get mean arrival time
+% A=double(squeeze(outImage));
+% sizeA=size(A);
+% meanT = zeros(sizeA(1:2));
+% parfor idx = 1:prod(sizeA(1:2))
+%     [i,j]=ind2sub(sizeA(1:2),idx);
+%     meanT(idx) = mean(squeeze(A(i,j,:)).*bins);
+% end
+% %
+% figure
+% imshow(mat2gray(meanT))
 
 %% Trying to reshape the sdt output file
 out=reshape([meanT(2:2:end,:) meanT(1:2:end,end:-1:1)],size(meanT,1),size(meanT,2));
 figure
 imshow(mat2gray(meanT))
-%%
-currFolder = 'H:\2p\stephen\SZ309\FLIM\200128_SZ309';
-tifs = dir(fullfile(currFolder,'*.tif'));
-
-t=Tiff(fullfile(currFolder,tifs(2).name));
-img=read(t);
