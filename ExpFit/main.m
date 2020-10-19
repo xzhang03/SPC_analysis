@@ -10,6 +10,7 @@ slices = filelist(contains(filelist.folder,'slice'),:);
 grins = filelist(contains(filelist.folder,'run'),:);
 
 sliceDir = unique(slices.folder,'stable');
+if~exist('akarMice','var') load('akarMice.mat'); end
 sliceDir = sliceDir(contains(sliceDir,akarMice));
 
 %% get all photon counts
@@ -43,6 +44,8 @@ end
 allDat.photCount = horzcat(data(:).photCount);
 allDat.acc = sum(allDat.photCount,2);
 
+
+%%
 bins=load_bins();
 x=bins;
 
@@ -57,15 +60,20 @@ upper = [0.2,7.2,1e10,1e10,1.5,3];
 opts = {'METHOD','NonlinearLeastSquares','Display','off',...
     'Robust','LAR','Lower',lower,'Upper',upper,'StartPoint',mean([lower;upper])};
 
-x=bins;
 y=allDat.acc;
 g = fittype(modelF,'independent','t');
 fo = fitoptions(opts{:});
 [f,gof] = fit(x,y,g,fo);
 disp(f)
+%%
 figure
-plot(x,y,x,modelF(f.w,f.shift,f.A,f.B,f.tau1,f.tau2,x),'.')
+plot(x,y,'LineWidth',1)
+hold on
+plot(x,modelF(f.w,f.shift,f.A,f.B,f.tau1,f.tau2,x),'r.')
 legend('Signal','Fit')
+xlabel('[ns]')
+ylabel('Photon Count')
+title('All pixels pooled together')
 
 %% Fit individual images pooled
 x=bins;
@@ -88,7 +96,7 @@ imgFits = obj2struct(AcqFits,fieldsArray);
 fieldsArray = {'sse','rsquare','dfe','adjrsquare','rmse'};
 imgGOFs = obj2struct(AcqGOF,fieldsArray);
 
-Parameters = {'w';'shift';'tau1';'tau2'};
+Parameters = {'tauG';'t0';'tau1';'tau2'};
 SingleFit = [f.w;f.shift;f.tau1;f.tau2];
 IndivFits = mean([imgFits.w;imgFits.shift;imgFits.tau1;imgFits.tau2],2);
 globParamsT = table(Parameters,SingleFit,IndivFits);
@@ -98,7 +106,7 @@ clear fieldsArray Parameters
 %% Fit individual pixels
 disp('######### Fitting all Pixels #########')
 x=bins;
-fitQ = Q(1:100:end,:,:,:);
+fitQ = Q(1,:,:,:);
 sizeQ = size(fitQ);
 pixFits=cell(sizeQ(1:3)); pixGOFs=cell(sizeQ(1:3));
 sizePix=sizeQ(2:3);
@@ -133,16 +141,31 @@ clear temp
 fieldsArray = {'sse','rsquare','dfe','adjrsquare','rmse'};
 pixRes = obj2struct(pixGOFs,fieldsArray);
 return
+
+%% figure of single pixel fit
+i=40;
+j=40;
+
+currFit=pixParams(1,i,j);
+figure
+plot(bins,squeeze(fitQ(1,i,j,:)))
+hold on
+plot(bins,modelF(globSrc(1),globSrc(2),currFit.A,currFit.B,globSrc(3),globSrc(4),bins),'LineWidth',2)
+xlabel('[ns]')
+ylabel('Photon Count')
+title('Single Pixel Fit')
+
+
 %% Look at Ratio over images
 currentImg = 1;
 
 figure
-subplot(2,1,1)
+% subplot(2,1,1)
 plotStructField(pixParams(currentImg,:,:),'Ratio')
 title('Ratio')
-subplot(2,1,2)
-plotStructField(pixRes(currentImg,:,:),'rmse')
-title('RMSE')
+% subplot(2,1,2)
+% plotStructField(pixRes(currentImg,:,:),'rmse')
+% title('RMSE')
 
 %%
 figure
@@ -197,3 +220,44 @@ path =fullfile(sliceDir{dirID},currFiles.name{f});
 out=reshape([meanT(2:2:end,:) meanT(1:2:end,end:-1:1)],size(meanT,1),size(meanT,2));
 figure
 imshow(mat2gray(meanT))
+
+
+% %% Test model fct shape
+% expDecay = @(A,B,tau1,tau2,t) heaviside(t).*((A.*exp(-t./tau1)+B.*exp(-t./tau2)));
+% IRF = @(w,shift,t) normpdf(t-shift,0,w);
+% modelF = @(w,shift,A,B,tau1,tau2,t) mean(diff(t))*conv(expDecay(A,B,tau1,tau2,t),IRF(w,shift,t),'same');
+% 
+% 
+% plotC=true;
+% if plotC
+%     w=0.1;
+%     shift=7.1;
+%     A=1;
+%     B=1;
+%     tau1=0.7;
+%     tau2=2;
+%     tv = [-flip(bins(1:64));bins];
+%     figure
+%     subplot(311)
+%     plot(tv,expDecay(A,B,tau1,tau2,tv),'g.')%,'LineWidth',2)
+%     legend('Exponential Decay')
+%     subplot(312)  
+%     plot(tv,normpdf(tv,0,w),'LineWidth',2)
+%     legend('Instrument Response Function')
+%     subplot(313)
+%     plot(tv,modelF(w,shift,A,B,tau1,tau2,tv),'r','LineWidth',2)
+%     xlabel('[ns]')
+%     legend('Modeled signal')
+% %     plot(bins,allDat.acc)
+% end
+% %%
+% 
+% figure
+% plot(bins,exp(-bins./tau1),'--','LineWidth',1)
+% hold on
+% plot(bins,exp(-bins./tau2),'--','LineWidth',1)
+% plot(bins,0.5*exp(-bins./tau1)+0.5*exp(-bins./tau2),'LineWidth',2)
+% xlabel('[ns]')
+% ylabel('Photon Count')
+% legend({'No Interaction','Interaction','Total Signal'})
+xlim([-1 14])
