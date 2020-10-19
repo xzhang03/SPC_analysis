@@ -1,3 +1,4 @@
+clear all
 machine = getenv('COMPUTERNAME');
 
 if ~strcmp(machine, 'CAMILLO')
@@ -10,6 +11,6 @@ else
     addpath(genpath('C:\Users\hfluhr\Documents\SPC_analysis'))
     rmpath('C:\Users\hfluhr\Documents\SPC_analysis/DistortionCorrection/archive/')
     addpath(genpath('C:\Users\hfluhr\Documents\MATLAB\bfmatlab'))
-%     sbx_path = "C:\Users\hfluhr\Documents\SPC_analysis\hugo\sample_images\sbx_sample.tif";
-%     flim_path = "C:\Users\hfluhr\Documents\SPC_analysis\hugo\sample_images\flim_sample.tif";
+    sbx_path = 'C:\Users\hfluhr\Documents\SPC_analysis\DistortionCorrection\sample_images\sbx_sample.tif';
+    flim_path = 'C:\Users\hfluhr\Documents\SPC_analysis\DistortionCorrection\sample_images\flim_sample.tif';
 end
