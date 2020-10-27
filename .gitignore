@@ -1,2 +1,4 @@
 */__pycache__
 *.asv
+*/py/.*
+*/py/__pycache__

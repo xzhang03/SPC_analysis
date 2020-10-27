@@ -26,7 +26,7 @@ if ~exist('Q','var')
         currFiles = currFiles(frames2drop:end,:);
         data(dirID).files = currFiles;
         parfor f = 1:size(currFiles,1)
-            [photCount{f}, photArrival{f}] = read_sdt(fullfile(sliceDir{dirID},currFiles.name{f}),binFactor);
+            [photCount{f}, photArrival{f}] = read_sdt(fullfile(sliceDir{dirID},currFiles.name{f}),binFactor,'matfile');
         end
         data(dirID).photCount = horzcat(photCount{:});
         data(dirID).photArrival = cat(4,photArrival{:});
@@ -44,11 +44,9 @@ end
 allDat.photCount = horzcat(data(:).photCount);
 allDat.acc = sum(allDat.photCount,2);
 
-
 %%
 bins=load_bins();
 x=bins;
-
 
 %% Complete model - Fit all aggregated data
 expDecay = @(A,B,tau1,tau2,t) heaviside(t).*((A.*exp(-t./tau1)+B.*exp(-t./tau2)));
@@ -65,15 +63,6 @@ g = fittype(modelF,'independent','t');
 fo = fitoptions(opts{:});
 [f,gof] = fit(x,y,g,fo);
 disp(f)
-%%
-figure
-plot(x,y,'LineWidth',1)
-hold on
-plot(x,modelF(f.w,f.shift,f.A,f.B,f.tau1,f.tau2,x),'r.')
-legend('Signal','Fit')
-xlabel('[ns]')
-ylabel('Photon Count')
-title('All pixels pooled together')
 
 %% Fit individual images pooled
 x=bins;
@@ -84,7 +73,7 @@ upper = [0.2,7.2,1e5,1e5,1.5,3];
 opts = {'METHOD','NonlinearLeastSquares','Display','off',...
     'Robust','LAR','Lower',lower,'Upper',upper,'StartPoint',mean([lower;upper])};
 
-parfor acq = 1:size(allDat.photCount,2)
+for acq = 1:size(allDat.photCount,2)
     y = allDat.photCount(:,acq);
     fo = fitoptions(opts{:});
     [AcqFits{acq}, AcqGOF{acq}] = fit(x,y,g,fo);
@@ -112,8 +101,8 @@ pixFits=cell(sizeQ(1:3)); pixGOFs=cell(sizeQ(1:3));
 sizePix=sizeQ(2:3);
 
 globSrc = SingleFit;
-lower = [globSrc(1),globSrc(2),1,1,globSrc(3),globSrc(4)];
-upper = [globSrc(1),globSrc(2),1e5,1e5,globSrc(3),globSrc(4)];
+lower = [globSrc(1),globSrc(2),0.5,0.5,globSrc(3)-0.1,globSrc(4)-0.1];
+upper = [globSrc(1),globSrc(2),1e2,1e2,globSrc(3)+0.1,globSrc(4)+0.1];
 opts = {'METHOD','NonlinearLeastSquares','Display','off',...
     'Robust','LAR','Lower',lower,'Upper',upper,'StartPoint',mean([lower;upper])};
 
@@ -131,8 +120,8 @@ for acq = 1:size(fitQ,1)
 end
 disp('done')
 
-%% Trying to convert thingsss
-fieldsArray = {'A','B'};
+% %% Trying to convert thingsss
+fieldsArray = {'A','B','tau1','tau2'};
 pixParams = obj2struct(pixFits,fieldsArray);
 temp=num2cell([pixParams.A]./[pixParams.B]);
 [pixParams.Ratio]=temp{:};
@@ -140,124 +129,33 @@ clear temp
 
 fieldsArray = {'sse','rsquare','dfe','adjrsquare','rmse'};
 pixRes = obj2struct(pixGOFs,fieldsArray);
-return
 
-%% figure of single pixel fit
-i=40;
-j=40;
-
-currFit=pixParams(1,i,j);
-figure
-plot(bins,squeeze(fitQ(1,i,j,:)))
-hold on
-plot(bins,modelF(globSrc(1),globSrc(2),currFit.A,currFit.B,globSrc(3),globSrc(4),bins),'LineWidth',2)
-xlabel('[ns]')
-ylabel('Photon Count')
-title('Single Pixel Fit')
-
-
-%% Look at Ratio over images
-currentImg = 1;
 
 figure
-% subplot(2,1,1)
-plotStructField(pixParams(currentImg,:,:),'Ratio')
-title('Ratio')
-% subplot(2,1,2)
-% plotStructField(pixRes(currentImg,:,:),'rmse')
-% title('RMSE')
+subplot(221)
+histogram([pixParams.A])
+title('A')
 
-%%
-figure
-heatmap(getFieldArray(pixParams(currentImg,:,:),'Ratio'));
+subplot(222)
+histogram([pixParams.B])
+title('B')
 
-%% Mean arrival time for all pixels
-for acq = 1:size(fitQ,1)
-    fprintf('# Exp %d...\n',acq)
-    Im = squeeze(fitQ(acq,:,:,:));
-    sizeIm=size(Im);
-    for idx = 1:prod(sizeIm(1:2))
-        [i,j]=ind2sub(sizeIm(1:2),idx);
-        pixParams(acq,i,j).meanT =mean(squeeze(Im(i,j,:)).*bins);
-    end
-end
-disp('done')
+subplot(223)
+histogram([pixParams.tau1])
+title('tau1')
 
-%% scatter plot
-figure
-scatter([pixParams.meanT],[pixParams.Ratio])
-xlabel('Mean Arrival Time')
-ylabel('Ratio')
-title('Ratio vs Mean Arrival Time for few frames')
-
-%% view
-dirID=1; f=50;
-currFiles = slices(strcmp(slices.folder,data(dirID).folder),:);
-path =fullfile(sliceDir{dirID},currFiles.name{f});
- 
-% grinDir = unique(grins.folder,'stable');
-% grinDir = grinDir(contains(grinDir,akarMice));
-% currFiles=grins(strcmp(grins.folder,grinDir(1)),:);
-% path = fullfile(currFiles.folder{1},currFiles.name{1});
-%%
-% [photCount, photArrival] = read_sdt(path,binFactor);
-% sdt = bfopen(path);
-% outImage = cat(3,sdt{1}{:,1});
-% 
-% % try to get mean arrival time
-% A=double(squeeze(outImage));
-% sizeA=size(A);
-% meanT = zeros(sizeA(1:2));
-% parfor idx = 1:prod(sizeA(1:2))
-%     [i,j]=ind2sub(sizeA(1:2),idx);
-%     meanT(idx) = mean(squeeze(A(i,j,:)).*bins);
+subplot(224)
+histogram([pixParams.tau2])
+title('tau2')
+% %% Mean arrival time for all pixels
+% for acq = 1:size(fitQ,1)
+%     fprintf('# Exp %d...\n',acq)
+%     Im = squeeze(fitQ(acq,:,:,:));
+%     sizeIm=size(Im);
+%     for idx = 1:prod(sizeIm(1:2))
+%         [i,j]=ind2sub(sizeIm(1:2),idx);
+%         pixParams(acq,i,j).meanT =mean(squeeze(Im(i,j,:)).*bins);
+%     end
 % end
-% %
-% figure
-% imshow(mat2gray(meanT))
+% disp('done')
 
-%% Trying to reshape the sdt output file
-out=reshape([meanT(2:2:end,:) meanT(1:2:end,end:-1:1)],size(meanT,1),size(meanT,2));
-figure
-imshow(mat2gray(meanT))
-
-
-% %% Test model fct shape
-% expDecay = @(A,B,tau1,tau2,t) heaviside(t).*((A.*exp(-t./tau1)+B.*exp(-t./tau2)));
-% IRF = @(w,shift,t) normpdf(t-shift,0,w);
-% modelF = @(w,shift,A,B,tau1,tau2,t) mean(diff(t))*conv(expDecay(A,B,tau1,tau2,t),IRF(w,shift,t),'same');
-% 
-% 
-% plotC=true;
-% if plotC
-%     w=0.1;
-%     shift=7.1;
-%     A=1;
-%     B=1;
-%     tau1=0.7;
-%     tau2=2;
-%     tv = [-flip(bins(1:64));bins];
-%     figure
-%     subplot(311)
-%     plot(tv,expDecay(A,B,tau1,tau2,tv),'g.')%,'LineWidth',2)
-%     legend('Exponential Decay')
-%     subplot(312)  
-%     plot(tv,normpdf(tv,0,w),'LineWidth',2)
-%     legend('Instrument Response Function')
-%     subplot(313)
-%     plot(tv,modelF(w,shift,A,B,tau1,tau2,tv),'r','LineWidth',2)
-%     xlabel('[ns]')
-%     legend('Modeled signal')
-% %     plot(bins,allDat.acc)
-% end
-% %%
-% 
-% figure
-% plot(bins,exp(-bins./tau1),'--','LineWidth',1)
-% hold on
-% plot(bins,exp(-bins./tau2),'--','LineWidth',1)
-% plot(bins,0.5*exp(-bins./tau1)+0.5*exp(-bins./tau2),'LineWidth',2)
-% xlabel('[ns]')
-% ylabel('Photon Count')
-% legend({'No Interaction','Interaction','Total Signal'})
-xlim([-1 14])

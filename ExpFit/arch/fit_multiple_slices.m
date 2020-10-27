@@ -9,15 +9,12 @@ filelist = filelist(~contains(filelist.folder,'blur'),:);
 slices = filelist(contains(filelist.folder,'slice'),:);
 grins = filelist(contains(filelist.folder,'run'),:);
 
+if ~exist('akarMice','var')
+    load akarMice.mat
+end
 sliceDir = unique(slices.folder,'stable');
 sliceDir = sliceDir(contains(sliceDir,akarMice));
 
-% %% afas
-% [phot_count,out_image] = read_sdt(fullfile(slice_dir{1},slices.name{1}));
-% 
-% y=squeeze(out_image(100:110,100:110,:));
-% y = squeeze(sum(sum(y,1),2));
-% plot(y)
 %% get all photon counts
 if ~exist('Q','var')
     data = struct('folder',{},'files',{},'photCount',{},'photArrival',{},'acc',{});
@@ -26,7 +23,8 @@ if ~exist('Q','var')
         data(dirID).folder = sliceDir{dirID};
         currFiles = slices(strcmp(slices.folder,data(dirID).folder),:);
         data(dirID).files = currFiles;
-        parfor f = 1:size(currFiles,1)
+        for f = 1:size(currFiles,1)
+            keyboard
             [photCount{f}, photArrival{f}] = read_sdt(fullfile(sliceDir{dirID},currFiles.name{f}),10);
         end
         data(dirID).photCount = horzcat(photCount{:});
