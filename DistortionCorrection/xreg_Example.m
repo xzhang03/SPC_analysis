@@ -1,9 +1,9 @@
 clearvars
 
-sbx_path = 'H:\2p\stephen\SZ317\SZ317_200130_001.sbx';
-flim_path = 'H:\2p\stephen\SZ317\FLIM\200130_SZ317\200130_SZ317_slice1_photons.tif';
-tif_path = 'H:\2p\stephen\SZ317\SZ317_200130_001_PMT0_binxy1_bint1_Frames50-10000.tif';
-tm_path = 'H:\2p\stephen\SZ317\FLIM\200130_SZ317\200130_SZ317_slice1_tm.tif';
+sbx_path = '\\nasquatch\data\2p\stephen\SZ317\SZ317_200130_001.sbx';
+flim_path = '\\nasquatch\data\2p\stephen\SZ317\FLIM\200130_SZ317\200130_SZ317_slice1_photons.tif';
+tif_path = '\\nasquatch\data\2p\stephen\SZ317\SZ317_200130_001_PMT0_binxy1_bint1_Frames50-10000.tif';
+tm_path = '\\nasquatch\data\2p\stephen\SZ317\FLIM\200130_SZ317\200130_SZ317_slice1_tm.tif';
 
 %% Loading images
 cind = 1;
