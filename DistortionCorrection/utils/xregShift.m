@@ -1,6 +1,6 @@
 function [movingReg, tform] = xregShift(fixed, moving, rtype)
-%UNTITLED3 Summary of this function goes here
-%   Detailed explanation goes here
+% Aligns the moving image to the fixed image performing only a translation.
+% tform is the transformation matrix to align the image.
 if nargin < 3
     rtype = 'translation';
 end
