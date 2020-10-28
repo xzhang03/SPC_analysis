@@ -1,2 +1,9 @@
-
+*/__pycache__
 *.asv
+*/py/.*
+*/py/__pycache__
+DistortionCorrection/utils/sbx2tiff_SZ.m
+DistortionCorrection/utils/sbxReadPMT.m
+DistortionCorrection/workspace.mat
+ExpFit/FLIMfit_tests.m
+dev_notes_Hugo

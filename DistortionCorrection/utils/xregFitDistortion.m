@@ -1,6 +1,8 @@
 function [xq, approx, beta, modelfun] = xregFitDistortion(sbx, x, y, fitType)
-%UNTITLED6 Summary of this function goes here
-%   Detailed explanation goes here
+% Fits the calibration points to one of the available models. Default model
+% is a cos^2 to account for the projection of the miror rotation on the
+% plane sample and the acceleration/deceleration of the miror.
+
 if nargin < 4
     fitType = 'cos2';
 end

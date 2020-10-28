@@ -1,6 +1,6 @@
 function [flimCorrected] = xregCorrectDistortion(flimReg, D)
-%UNTITLED7 Summary of this function goes here
-%   Detailed explanation goes here
+% Applies a pre-computed displacement field to an image to correct for
+% scanning induced distortions.
 
 flimCorrected = imwarp(flimReg, D, 'cubic');
 

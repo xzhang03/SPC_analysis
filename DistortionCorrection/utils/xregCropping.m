@@ -1,6 +1,6 @@
 function [im1cropped, im2cropped] = xregCropping(im1, im2, margin)
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
+% Crops two images to the same size using the margin defined by the user to
+% get rid of deadbands on edges of the image.
 if nargin < 3
     margin = 100;
 end
