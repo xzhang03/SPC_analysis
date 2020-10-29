@@ -1,6 +1,5 @@
 function [idx] = max2d(mat, varargin)
-%UNTITLED6 Summary of this function goes here
-%   Detailed explanation goes here
+% Returns the coordinates of the max value of a 2d array.
 if nargin < 2
     form = '2d';
 else

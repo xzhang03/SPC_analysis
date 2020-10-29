@@ -1,6 +1,9 @@
 function [x, y, yFLIM, ySBX] = xregGetPoints(sbx, flimReg, nbpoints)
-%UNTITLED5 Summary of this function goes here
-%   Detailed explanation goes here
+% Tool to get user defined calibration points to fit a distortion
+% correction. The user clicks on 10 landmarks, alternating between the FLIM
+% image(left) and the SBX image (right). First click needs to be on the
+% FLIM image.
+
 if nargin < 3
     nbpoints = 20;
 end
