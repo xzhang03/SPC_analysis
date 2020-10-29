@@ -1,6 +1,5 @@
 function [tmCorrected] = xregCorrectTM(tm, tform, D)
-%UNTITLED3 Summary of this function goes here
-%   Detailed explanation goes here
+% Applies the shift (tform) and distortion correction (D) to a tm image.
 Rfixed = imref2d(size(tm));
 tmShifted = imwarp(tm, tform, 'OutputView', Rfixed);
 tmCorrected = xregCorrectDistortion(tmShifted, D);
