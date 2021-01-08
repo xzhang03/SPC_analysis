@@ -10,6 +10,9 @@ addOptional(p, 'user', ''); % user name for path
 addOptional(p, 'slice', false); % Flag if data is slice
 addOptional(p, 'cdigit', 1); % Digits used for the "c" components in the file names (1, 2, or 3)
 
+% Registration variables
+addOptional(p, 'sourcetype', 'demonsreg'); % Input type can be 'warped' or 'demonsreg'
+
 % Sbx variables
 addOptional(p, 'sbxrun', []); % Sbx run number
 addOptional(p, 'checkwarp', false); % Check warp
@@ -76,6 +79,23 @@ spcpaths = spcPath(mouse, date, run, 'server', p.server, 'user', p.user,...
 % Get sbx path
 sbxpath = sbxPath(mouse, date, p.sbxrun, 'signals', 'server', p.server);
 
+% Image paths
+% Switch types
+switch p.sourcetype
+    case 'raw'
+        fp_photon = fullfile(spcpaths.fp_out, spcpaths.tif_photons);
+        fp_tm = fullfile(spcpaths.fp_out, spcpaths.tif_tm);
+    case 'registered'
+        fp_photon = fullfile(spcpaths.fp_out, spcpaths.regtif_photons);
+        fp_tm = fullfile(spcpaths.fp_out, spcpaths.regtif_tm);
+    case 'warped'
+        fp_photon = fullfile(spcpaths.fp_out, spcpaths.warptif_photons);
+        fp_tm = fullfile(spcpaths.fp_out, spcpaths.warptif_tm);
+    case 'demonsreg'
+        fp_photon = fullfile(spcpaths.fp_out, spcpaths.demregtif_photons);
+        fp_tm = fullfile(spcpaths.fp_out, spcpaths.demregtif_tm);
+end
+
 %% Check warp
 if p.checkwarp
     % Load sbx sample
@@ -90,7 +110,7 @@ if p.checkwarp
     sbxsample = readtiff(fullfile(sbxrefpath, sbxrefname));
     
     % Load spc photon data
-    im_photon = readtiff(fullfile(spcpaths.fp_out, spcpaths.warptif_photons));
+    im_photon = readtiff(fp_photon);
     
     % Make spc sample
     spcsample = mean(im_photon, 3);
@@ -137,15 +157,13 @@ end
 % Load photon data
 if p.dophotons && ~exist('im_photon', 'var')
     % Load warped
-    [im_photon, ~] =...
-        readtiff(fullfile(spcpaths.fp_out, spcpaths.warptif_photons));
+    [im_photon, ~] = readtiff(fp_photon);
 end
 
 % Load tm data
 if p.dotm
     % Load warped
-    [im_tm, ~] =...
-        readtiff(fullfile(spcpaths.fp_out, spcpaths.warptif_tm));
+    [im_tm, ~] = readtiff(fp_tm);
 end
 
 % Get the number of sections
@@ -314,7 +332,7 @@ if p.saverefim
     imshow(rgb)
 
     % Save figure
-    saveas(gcf, fullfile(spcpaths.fp_out, spcpaths.run_ROI_csv));
+    saveas(gcf, fullfile(spcpaths.fp_out, spcpaths.run_ROI_ref));
 end
 
 if p.savetmcsv
