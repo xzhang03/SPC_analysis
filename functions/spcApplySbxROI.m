@@ -10,6 +10,9 @@ addOptional(p, 'user', ''); % user name for path
 addOptional(p, 'slice', false); % Flag if data is slice
 addOptional(p, 'cdigit', 1); % Digits used for the "c" components in the file names (1, 2, or 3)
 
+% Force
+addOptional(p, 'force', false); % Force
+
 % Registration variables
 addOptional(p, 'sourcetype', 'demonsreg'); % Input type can be 'warped' or 'demonsreg'
 
@@ -18,7 +21,7 @@ addOptional(p, 'sbxrun', []); % Sbx run number
 addOptional(p, 'checkwarp', false); % Check warp
 
 % Cropping
-addOptional(p, 'margin', 100);
+addOptional(p, 'margin', 0);
 
 % Binning
 addOptional(p, 'binxy', 1);
@@ -133,7 +136,7 @@ ncells = length(sigstruct.cellsort) - 1;
 
 %% Initialize
 % datastruct
-if isfield(sigstruct, 'cellsort_spc')
+if isfield(sigstruct, 'cellsort_spc') && ~p.force
     cellsort_spc = sigstruct.cellsort_spc;
     
     % Redo?
@@ -260,18 +263,18 @@ if p.dotm || p.dophotons
         if p.dophotons
             % raw photon trace
             photon_trace =...
-                squeeze(sum(sum(im_photon_crop .* mask_stack, 1), 2)) / currarea;
+                squeeze(nansum(nansum(im_photon_crop .* mask_stack, 1), 2)) / currarea;
             cellsort_spc(i).photon_trace.raw = photon_trace;
 
             % dff photon trace
             dff_trace =...
-                photon_trace / mean(photon_trace(p.StartFrame : p.StartFrame+p.StartFrameN));
+                photon_trace / mean(photon_trace(p.StartFrame : p.StartFrame+p.StartFrameN)) - 1;
             cellsort_spc(i).photon_trace.delta = dff_trace;
         end
         if p.dotm
             % raw tm trace
             tm_trace =...
-                squeeze(sum(sum(im_tm_crop .* mask_stack, 1), 2)) / currarea;
+                squeeze(nansum(nansum(im_tm_crop .* mask_stack, 1), 2)) / currarea;
             cellsort_spc(i).tm_trace.raw = tm_trace;
 
             % dt tm trace
@@ -311,7 +314,7 @@ end
 sigstruct.cellsort_spc = cellsort_spc;
 
 % Save file
-save(sbxpath, '-struct', 'sigstruct');
+save(sbxpath, '-struct', 'sigstruct', '-v7.3');
 
 if p.saverefim
     % Initialize
