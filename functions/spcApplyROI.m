@@ -36,6 +36,9 @@ addOptional(p, 'savexruntm', true);
 addOptional(p, 'multifov', false);
 addOptional(p, 'fov', 1); % Specify fov
 
+% Allowable pixels
+addOptional(p, 'minallowabletm', 1000); % Minimal tm value that is allowed to be considered a cell (rejects 0 pixels)
+
 % Unpack if needed
 if iscell(varargin) && size(varargin,1) * size(varargin,2) == 1
     varargin = varargin{:};
@@ -179,6 +182,12 @@ for run_ind = 1 : length(runs)
         end
     end
     
+    % If doing tm, remove 0 pixels
+    if p.dotm
+        % Calculate an allowable region
+        ROI_allow = min(im_tm, [], 3) >= p.minallowabletm;
+    end
+    
     % Apply filters
     for i = 1 : ncells
         % Filter id
@@ -186,6 +195,11 @@ for run_ind = 1 : length(runs)
         
         % Filter
         currfilt = ROI_struct(run_ind).ROI_xmatch_clean == filterid;
+        
+        % If doing tm, remove 0 pixels
+        if p.dotm
+            currfilt = currfilt .* ROI_allow;
+        end
         
         % Area
         currarea = sum(currfilt(:));
