@@ -253,7 +253,7 @@ if p.plottm
     figure
     hold on
     plot(1 : length(runs), tm_avg_mat(:,2:end), 'Color', [0.6 0.6 0.6]);
-    plot(1 : length(runs), mean(tm_avg_mat(:,2:end),1), 'Color', [1 0 0], 'LineWidth', 5);
+    plot(1 : length(runs), nanmean(tm_avg_mat(:,2:end),1), 'Color', [1 0 0], 'LineWidth', 5);
     hold off
     xlabel('Runs')
     ylabel('Tm (ps)')
