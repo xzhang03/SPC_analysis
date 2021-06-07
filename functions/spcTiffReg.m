@@ -165,14 +165,18 @@ if dophotons || dotm
     im2reg = im2reg(regfocus2(1) : regfocus2(2), regfocus2(3) : regfocus2(4));
     
     % Normalize reference
+    im2reg = medfilt2(im2reg, [2 2], 'symmetric');
     f_prime = im2reg - imgaussfilt(im2reg, 8);
     im2reg = f_prime ./ (imgaussfilt(f_prime.^2, 30).^(1/2));
+    im2reg(isnan(im2reg)) = 0;
     
     % Loop through and normalize/crop each frame
     for i = 1 : size(im_photon_bin, 3)
         frame = im_photon_bin(regfocus2(1) : regfocus2(2), regfocus2(3) : regfocus2(4), i);
+        frame = medfilt2(frame, [2 2], 'symmetric');
         f_prime = frame - imgaussfilt(frame, 8);
         g_prime = f_prime ./ (imgaussfilt(f_prime.^2, 30).^(1/2));
+        g_prime(isnan(g_prime)) = 0;
         
         im_photon2reg(:,:,i) = g_prime;
     end

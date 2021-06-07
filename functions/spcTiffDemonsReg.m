@@ -129,6 +129,13 @@ if dophotons || dotm
         % Reference
         ref = ref(p.edges(3)+1:end-p.edges(4), p.edges(1)+1:end-p.edges(2), :);
         
+        if mod(size(ref,2), p.binxy) ~= 0 || mod(size(ref,1), p.binxy) ~= 0
+            fprintf('Wrong edge values.\n')
+            fprintf('Residual in the first two values: %i.\n', mod(size(ref,2),p.binxy));
+            fprintf('Residual in the last two values: %i.\n', mod(size(ref,1), p.binxy));
+            return;
+        end
+        
         % Photon data
         im_photon2 = im_photon(p.edges(3)+1:end-p.edges(4), p.edges(1)+1:end-p.edges(2), :);
     else
