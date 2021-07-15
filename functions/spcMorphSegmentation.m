@@ -88,9 +88,13 @@ end
 % Frame to segment
 im2seg = median(im_photon(:,:,F), 3);
 
+% Median filter
+im2seg = medfilt2(im2seg, [2 2], 'symmetric');
+
 % Local normalize
 f_prime = im2seg - imgaussfilt(im2seg, 8);
 im2seg2 = f_prime ./ (imgaussfilt(f_prime.^2, 30).^(1/2));
+im2seg2(isnan(im2seg2)) = 0;
 
 % Segmentation
 icaguidata = sbxMorphologicalFilterExtractROIs_SZ(im2seg2, 'PlotOrNot', false,...
