@@ -170,6 +170,7 @@ if dophotons || dotm
     n = p.hp_norm_sigmas(1);
     m = p.hp_norm_sigmas(2);
     if p.uselocalnorm
+        ref(isnan(ref)) = 0;
         ref_prime = single(ref)-single(imgaussfilt(double(ref),n));
         ref = ref_prime ./ (imgaussfilt(ref_prime.^2,m) .^ (1/2));
         ref(isnan(ref)) = 0;
@@ -189,7 +190,9 @@ if dophotons || dotm
             im_photon2(:,:,i) = medfilt2(im_photon2(:,:,i), p.medfilt2size, 'symmetric');
         end
         if p.uselocalnorm
-            f_prime = im_photon2(:,:,i) - imgaussfilt(single(im_photon2(:,:,i)),n);
+            f = im_photon2(:,:,i);
+            f(isnan(f)) = 0;
+            f_prime = f - imgaussfilt(single(f),n);
             g_prime = f_prime ./ (imgaussfilt(f_prime.^2,m).^(1/2));
 
             g_prime(isnan(g_prime)) = 0;

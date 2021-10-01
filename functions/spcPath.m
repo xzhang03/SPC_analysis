@@ -64,6 +64,10 @@ spcpaths.tm_in = sprintf('%s_%s_%s%i_%s_t1.asc', date, mouse, RunOrSlice, run,..
 spcpaths.photons_in = sprintf('%s_%s_%s%i_%s_photons.asc', date, mouse, RunOrSlice, run,...
     cstring);
 
+% Cellpose input file
+spcpaths.cp_seg = sprintf('%s_%s_%s%i_toseg.png', date, mouse, RunOrSlice, ...
+    run);
+
 %% Get the c indices
 % Dir
 flist = dir(fullfile(spcpaths.fp,'*.img'));
@@ -101,6 +105,10 @@ spcpaths.regtif_photons = sprintf('%s_%s_%s%i_photons_reg.tif', date, mouse, Run
 spcpaths.warptif_photons = sprintf('%s_%s_%s%i_photons_warp.tif', date, mouse, RunOrSlice, ...
     run);
 spcpaths.demregtif_photons = sprintf('%s_%s_%s%i_photons_demreg.tif', date, mouse, RunOrSlice, ...
+    run);
+
+% Cellpose output file
+spcpaths.cp_toseg = sprintf('%s_%s_%s%i_toseg.tif', date, mouse, RunOrSlice, ...
     run);
 
 % Mat output files

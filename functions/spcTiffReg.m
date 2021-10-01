@@ -172,9 +172,9 @@ if dophotons || dotm
     % Normalize reference
     im2reg = medfilt2(im2reg, p.medfilt2size, 'symmetric');
     if p.uselocalnorm
+        im2reg(isnan(im2reg)) = 0;
         f_prime = im2reg - imgaussfilt(im2reg, p.hp_norm_sigmas(1));
         im2reg = f_prime ./ (imgaussfilt(f_prime.^2, p.hp_norm_sigmas(2)).^(1/2));
-        im2reg(isnan(im2reg)) = 0;
     end
     figure
     imshow(im2reg,[]);
@@ -185,9 +185,9 @@ if dophotons || dotm
         frame = medfilt2(frame, p.medfilt2size, 'symmetric');
         
         if p.uselocalnorm
+            frame(isnan(frame)) = 0;
             f_prime = frame - imgaussfilt(frame, p.hp_norm_sigmas(1));
             g_prime = f_prime ./ (imgaussfilt(f_prime.^2, p.hp_norm_sigmas(2)).^(1/2));
-            g_prime(isnan(g_prime)) = 0;
 
             im_photon2reg(:,:,i) = g_prime;
         else
