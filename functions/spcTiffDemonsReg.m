@@ -16,6 +16,7 @@ addOptional(p, 'sourcetype', 'registered'); % Can be 'raw', 'reigstered', 'warpe
 addOptional(p, 'force', false); % Force overwrite or not
 
 % Spatial filter variables
+addOptional(p, 'uselocalnorm', true);
 addOptional(p, 'hp_norm_sigmas', [8, 30], @isnumeric); % Sigma for gaussian fit
 addOptional(p, 'medfilt2size', [2 2]); % Neighbor area for 2D median filter
 
@@ -168,9 +169,13 @@ if dophotons || dotm
     % Highpass and normalize reference
     n = p.hp_norm_sigmas(1);
     m = p.hp_norm_sigmas(2);
-    ref_prime = single(ref)-single(imgaussfilt(double(ref),n));
-    ref = ref_prime ./ (imgaussfilt(ref_prime.^2,m) .^ (1/2));
-    ref(isnan(ref)) = 0;
+    if p.uselocalnorm
+        ref_prime = single(ref)-single(imgaussfilt(double(ref),n));
+        ref = ref_prime ./ (imgaussfilt(ref_prime.^2,m) .^ (1/2));
+        ref(isnan(ref)) = 0;
+    end
+    figure;
+    imshow(ref,[]);
     
     % Bin images
     if p.binxy > 1
@@ -183,12 +188,14 @@ if dophotons || dotm
         if ~isempty(p.medfilt2size)
             im_photon2(:,:,i) = medfilt2(im_photon2(:,:,i), p.medfilt2size, 'symmetric');
         end
-        f_prime = im_photon2(:,:,i) - imgaussfilt(single(im_photon2(:,:,i)),n);
-        g_prime = f_prime ./ (imgaussfilt(f_prime.^2,m).^(1/2));
+        if p.uselocalnorm
+            f_prime = im_photon2(:,:,i) - imgaussfilt(single(im_photon2(:,:,i)),n);
+            g_prime = f_prime ./ (imgaussfilt(f_prime.^2,m).^(1/2));
 
-        g_prime(isnan(g_prime)) = 0;
+            g_prime(isnan(g_prime)) = 0;
 
-        im_photon2(:,:,i)=g_prime;
+            im_photon2(:,:,i)=g_prime;
+        end
     end
     
     % Initialize D_combined

@@ -14,6 +14,11 @@ addOptional(p, 'cdigit', 1); % Digits used for the "c" components in the file na
 addOptional(p, 'autogentiff', true); % If the original tiffs were not made, make them
 addOptional(p, 'force', false); % Force overwrite or not
 
+% Spatial filter variables
+addOptional(p, 'uselocalnorm', true);
+addOptional(p, 'hp_norm_sigmas', [8, 30], @isnumeric); % Sigma for gaussian fit
+addOptional(p, 'medfilt2size', [2 2]); % Neighbor area for 2D median filter
+
 % Registration variables
 addOptional(p, 'binxy', 1); % Binning
 
@@ -165,20 +170,29 @@ if dophotons || dotm
     im2reg = im2reg(regfocus2(1) : regfocus2(2), regfocus2(3) : regfocus2(4));
     
     % Normalize reference
-    im2reg = medfilt2(im2reg, [2 2], 'symmetric');
-    f_prime = im2reg - imgaussfilt(im2reg, 8);
-    im2reg = f_prime ./ (imgaussfilt(f_prime.^2, 30).^(1/2));
-    im2reg(isnan(im2reg)) = 0;
+    im2reg = medfilt2(im2reg, p.medfilt2size, 'symmetric');
+    if p.uselocalnorm
+        f_prime = im2reg - imgaussfilt(im2reg, p.hp_norm_sigmas(1));
+        im2reg = f_prime ./ (imgaussfilt(f_prime.^2, p.hp_norm_sigmas(2)).^(1/2));
+        im2reg(isnan(im2reg)) = 0;
+    end
+    figure
+    imshow(im2reg,[]);
     
     % Loop through and normalize/crop each frame
     for i = 1 : size(im_photon_bin, 3)
         frame = im_photon_bin(regfocus2(1) : regfocus2(2), regfocus2(3) : regfocus2(4), i);
-        frame = medfilt2(frame, [2 2], 'symmetric');
-        f_prime = frame - imgaussfilt(frame, 8);
-        g_prime = f_prime ./ (imgaussfilt(f_prime.^2, 30).^(1/2));
-        g_prime(isnan(g_prime)) = 0;
+        frame = medfilt2(frame, p.medfilt2size, 'symmetric');
         
-        im_photon2reg(:,:,i) = g_prime;
+        if p.uselocalnorm
+            f_prime = frame - imgaussfilt(frame, p.hp_norm_sigmas(1));
+            g_prime = f_prime ./ (imgaussfilt(f_prime.^2, p.hp_norm_sigmas(2)).^(1/2));
+            g_prime(isnan(g_prime)) = 0;
+
+            im_photon2reg(:,:,i) = g_prime;
+        else
+            im_photon2reg(:,:,i) = frame;
+        end
     end
     
     % Get shifts
