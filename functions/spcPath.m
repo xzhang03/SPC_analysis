@@ -65,7 +65,7 @@ spcpaths.photons_in = sprintf('%s_%s_%s%i_%s_photons.asc', date, mouse, RunOrSli
     cstring);
 
 % Cellpose input file
-spcpaths.cp_seg = sprintf('%s_%s_%s%i_toseg.png', date, mouse, RunOrSlice, ...
+spcpaths.cp_masks = sprintf('%s_%s_%s%i_toseg_cp_masks.png', date, mouse, RunOrSlice, ...
     run);
 
 %% Get the c indices
@@ -113,6 +113,10 @@ spcpaths.cp_toseg = sprintf('%s_%s_%s%i_toseg.tif', date, mouse, RunOrSlice, ...
 
 % Mat output files
 spcpaths.mat = sprintf('%s_%s_%s%i_output.mat', date, mouse, RunOrSlice, ...
+    run);
+
+% Signals output files
+spcpaths.signals = sprintf('%s_%s_%s%i_signals.mat', date, mouse, RunOrSlice, ...
     run);
 
 % CSV output files
