@@ -149,7 +149,7 @@ end
 trace_ini = struct('raw', [], 'neuropil', [], 'subtracted', [], 'raw_delta', [],...
     'neuropil_delta', [], 'subtracted_delta', []); % Delta is dff or dt
 cellsort_spc = struct('id', [], 'mask', [], 'area', [], 'neuropil', [], 'neuropilarea', [], 'group_number', [],...
-    'photon_trace', trace_ini, 'tm_trace', trace_ini);
+    'photon_trace', trace_ini, 'tm_trace', trace_ini, 'tm_start',[]);
 cellsort_spc = repmat(cellsort_spc, [ncells, 1]);
 
 %% Photons and Tm
@@ -197,6 +197,9 @@ npelsmall = strel('disk', p.npsize(2));
 % Index for real cells
 irealcell = 0;
 
+% All ROIs
+allmasks = imdilate(masks, npelsmall) > 0;
+
 if p.dotm || p.dophotons
     % Apply filters
     hwait = waitbar(0, 'Applying masks');
@@ -213,10 +216,11 @@ if p.dotm || p.dophotons
             irealcell = irealcell + 1;
             
             % Neuropil (before binning)
-            npcurr = imdilate(maskcurr, npelbig) - imdilate(maskcurr, npelsmall);
+            npcurr = imdilate(maskcurr, npelbig);
             if p.GRIN
                 npcurr = npcurr .* double(p.grinface);
             end
+            npcurr = npcurr .* ~allmasks;
             nparea = sum(npcurr(:) > 0);
             
             % Make sure np areai is ok
@@ -225,11 +229,12 @@ if p.dotm || p.dophotons
                 
                 while nparea < p.minnparea
                     npsizetry = npsizetry + 1;
-                    npcurr = imdilate(maskcurr, strel('disk', npsizetry)) - imdilate(maskcurr, npelsmall);
+                    npcurr = imdilate(maskcurr, strel('disk', npsizetry));
                     
                     if p.GRIN
                         npcurr = npcurr .* p.grinface;
                     end
+                    npcurr = npcurr .* ~allmasks;
                     nparea = sum(npcurr(:) > 0);
                 end
             end
@@ -313,18 +318,21 @@ if p.dotm || p.dophotons
 
                 % dt tm trace
                 dt_trace =...
-                    tm_trace - mean(tm_trace(p.StartFrame : p.StartFrame+p.StartFrameN));
+                    tm_trace - mean(tm_trace(p.StartFrame : p.StartFrame+p.StartFrameN-1));
                 cellsort_spc(irealcell).tm_trace.raw_delta = dt_trace;
                 
                 % dt tm np trace
                 dt_np_trace =...
-                    tm_np_trace - mean(tm_np_trace(p.StartFrame : p.StartFrame+p.StartFrameN));
+                    tm_np_trace - mean(tm_np_trace(p.StartFrame : p.StartFrame+p.StartFrameN-1));
                 cellsort_spc(irealcell).tm_trace.neuropil_delta = dt_np_trace;
                 
                 % dt tm subtracted trace
                 dt_subtracted_trace =...
-                    tm_subtracted_trace - mean(tm_subtracted_trace(p.StartFrame : p.StartFrame+p.StartFrameN));
+                    tm_subtracted_trace - mean(tm_subtracted_trace(p.StartFrame : p.StartFrame+p.StartFrameN-1));
                 cellsort_spc(irealcell).tm_trace.subtracted_delta = dt_subtracted_trace;
+                
+                % Tm start
+                cellsort_spc(irealcell).tm_start = mean(tm_trace(p.StartFrame : p.StartFrame+p.StartFrameN-1));
             end
         end
     end

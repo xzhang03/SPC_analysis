@@ -24,6 +24,13 @@ addOptional(p, 'makeplot', false); % Make histogram
 % Drop out pixels
 addOptional(p, 'dropoutthrehsold', 500); % Values below which are dropped out
 
+% Smoothing for trace
+addOptional(p, 'smoothwin', 30);
+
+% Figure position
+addOptional(p, 'pos', [600 500 1000 420]);
+
+
 % Unpack if needed
 if iscell(varargin) && size(varargin,1) * size(varargin,2) == 1
     varargin = varargin{:};
@@ -92,16 +99,26 @@ im_tm = binxy(im_tm, p.binxy);
 %% Reshape
 % Reshape
 [x, y, z] = size(im_tm);
-im_tm = reshape(im_tm, [x*y*z 1]);
-im_tm = im_tm(im_tm >= p.dropoutthrehsold);
+im_tm2 = reshape(im_tm, [x*y*z 1]);
+im_tm2 = im_tm2(im_tm2 >= p.dropoutthrehsold);
 
-tm = mean(im_tm);
+tm = mean(im_tm2);
+
+%% Get timecourse
+% Time course
+trace = zeros(z,1);
+for i = 1 : z
+    f = im_tm(:,:,i);
+    trace(i) = mean(f(f >= p.dropoutthrehsold));
+end
+trace = movmedian(trace, p.smoothwin);
 
 %% Plot
 if p.makeplot
     % Histogram
-    figure
-    hist(im_tm, 1000);
+    figure('Position', p.pos)
+    subplot(1,2,1)
+    hist(im_tm2, 1000);
     title(sprintf('%s %s run%i Tm histogram', mouse, date, run));
     
     % Show mean
@@ -112,5 +129,14 @@ if p.makeplot
     
     text(double(tm)*1.02, ylims(2)*0.97, sprintf('Tm = %i', round(tm)), ...
         'FontSize', 15, 'Color', 'r');
+    
+    % Subplot 2
+    subplot(1,2,2);
+    plot(trace)
+    
 end
+
+
+
+
 end
