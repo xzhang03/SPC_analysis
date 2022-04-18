@@ -21,6 +21,9 @@ addOptional(p, 'medfilt2size', [2 2]); % Neighbor area for 2D median filter
 
 % Registration variables
 addOptional(p, 'binxy', 1); % Binning
+addOptional(p, 'range', []); % Specify first and last frame numbers, leave empty to us all
+addOptional(p, 'externalreftarget', false); % External reference target (same size)
+addOptional(p, 'iterations', 1); % Repeated iterations
 
 % Unpack if needed
 if iscell(varargin) && size(varargin,1) * size(varargin,2) == 1
@@ -151,7 +154,15 @@ if dophotons || dotm
     end
     
     % Median
-    im2reg = median(im_photon_bin,3);
+    if p.externalreftarget
+        [targetfn, targetfp] = uigetfile(fullfile(spcpaths.fp_out, '*.tif'), 'Select a tiff file.');
+        im2reg = readtiff(fullfile(targetfp, targetfn));
+        im2reg = binxy(im2reg, p.binxy);
+    elseif isempty(p.range)
+        im2reg = median(im_photon_bin,3);
+    else
+        im2reg = median(im_photon_bin(:,:,p.range(1):p.range(2)),3);
+    end
     
     % Get a focus area for calculating shifts
     imshow(im2reg,[]);
@@ -166,61 +177,79 @@ if dophotons || dotm
     % Get coordinates
     regfocus2 = [regfocus(2), regfocus(2) + regfocus(4) - 1, regfocus(1), regfocus(1) + regfocus(3) - 1];
     
-    % Crop reference
-    im2reg = im2reg(regfocus2(1) : regfocus2(2), regfocus2(3) : regfocus2(4));
-    
-    % Normalize reference
-    im2reg = medfilt2(im2reg, p.medfilt2size, 'symmetric');
-    if p.uselocalnorm
-        im2reg(isnan(im2reg)) = 0;
-        f_prime = im2reg - imgaussfilt(im2reg, p.hp_norm_sigmas(1));
-        im2reg = f_prime ./ (imgaussfilt(f_prime.^2, p.hp_norm_sigmas(2)).^(1/2));
-    end
-    figure
-    imshow(im2reg,[]);
-    
-    % Loop through and normalize/crop each frame
-    for i = 1 : size(im_photon_bin, 3)
-        frame = im_photon_bin(regfocus2(1) : regfocus2(2), regfocus2(3) : regfocus2(4), i);
-        frame = medfilt2(frame, p.medfilt2size, 'symmetric');
+    % Iterative registration
+    for i_iter = 1 : p.iterations
+        % Show
+        fprintf('Iterative registration: %i/%i.\n', i_iter, p.iterations);
         
-        if p.uselocalnorm
-            frame(isnan(frame)) = 0;
-            f_prime = frame - imgaussfilt(frame, p.hp_norm_sigmas(1));
-            g_prime = f_prime ./ (imgaussfilt(f_prime.^2, p.hp_norm_sigmas(2)).^(1/2));
-
-            im_photon2reg(:,:,i) = g_prime;
-        else
-            im_photon2reg(:,:,i) = frame;
+        % Recalculate new target
+        if i_iter > 1
+            % Bin
+            im_photon_bin = binxy(im_photon, p.binxy);
+            
+            % Ref
+            im2reg = median(im_photon_bin,3);
         end
-    end
-    
-    % Get shifts
-    [xy_shifts,~]=stackRegisterMA_RR(im_photon2reg,im2reg);
-    
-    % Modify the shifts according to binning (correlation values will be
-    % messed up.
-    if p.binxy > 1
-        xy_shifts = xy_shifts * p.binxy;
-    end
-    
-    % Apply shifts to photon data
-    if dophotons
-        % Apply shifts
-        [~,im_photon]=stackRegisterMA_RR(im_photon, [], [], xy_shifts);
         
-        % Write
-        writetiff(im_photon, fullfile(spcpaths.fp_out,spcpaths.regtif_photons), 'double');
-    
-    end
-    
-    % Apply shifts to tm data
-    if dotm
-        % Apply shifts
-        [~,im_tm]=stackRegisterMA_RR(im_tm, [], [], xy_shifts);
-        
-        % Write
-        writetiff(im_tm, fullfile(spcpaths.fp_out,spcpaths.regtif_tm), 'double');
+        % Crop reference
+        im2reg = im2reg(regfocus2(1) : regfocus2(2), regfocus2(3) : regfocus2(4));
+
+        % Normalize reference
+        im2reg = medfilt2(im2reg, p.medfilt2size, 'symmetric');
+        if p.uselocalnorm
+            im2reg(isnan(im2reg)) = 0;
+            f_prime = im2reg - imgaussfilt(im2reg, p.hp_norm_sigmas(1));
+            im2reg = f_prime ./ (imgaussfilt(f_prime.^2, p.hp_norm_sigmas(2)).^(1/2));
+        end
+        figure
+        imshow(im2reg,[]);
+
+        % Loop through and normalize/crop each frame
+        for i = 1 : size(im_photon_bin, 3)
+            frame = im_photon_bin(regfocus2(1) : regfocus2(2), regfocus2(3) : regfocus2(4), i);
+            frame = medfilt2(frame, p.medfilt2size, 'symmetric');
+
+            if p.uselocalnorm
+                frame(isnan(frame)) = 0;
+                f_prime = frame - imgaussfilt(frame, p.hp_norm_sigmas(1));
+                g_prime = f_prime ./ (imgaussfilt(f_prime.^2, p.hp_norm_sigmas(2)).^(1/2));
+
+                im_photon2reg(:,:,i) = g_prime;
+            else
+                im_photon2reg(:,:,i) = frame;
+            end
+        end
+
+        % Get shifts
+        [xy_shifts,~]=stackRegisterMA_RR(im_photon2reg,im2reg);
+
+        % Modify the shifts according to binning (correlation values will be
+        % messed up.
+        if p.binxy > 1
+            xy_shifts = xy_shifts * p.binxy;
+        end
+
+        % Apply shifts to photon data
+        if dophotons
+            % Apply shifts
+            [~,im_photon]=stackRegisterMA_RR(im_photon, [], [], xy_shifts);
+
+            % Write
+            if i_iter == p.iterations
+                writetiff(im_photon, fullfile(spcpaths.fp_out,spcpaths.regtif_photons), 'double');
+            end
+        end
+
+        % Apply shifts to tm data
+        if dotm
+            % Apply shifts
+            [~,im_tm]=stackRegisterMA_RR(im_tm, [], [], xy_shifts);
+
+            % Write
+            if i_iter == p.iterations
+                writetiff(im_tm, fullfile(spcpaths.fp_out,spcpaths.regtif_tm), 'double');
+            end
+        end
     end
 end
 end
