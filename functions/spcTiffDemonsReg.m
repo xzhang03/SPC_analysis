@@ -22,6 +22,7 @@ addOptional(p, 'medfilt2size', [2 2]); % Neighbor area for 2D median filter
 
 % Registration variables
 addOptional(p, 'binxy', 1); % Binning
+addOptional(p, 'iterations', 1); % Repeated registrations
 
 % Edge
 addOptional(p, 'edges', [0 0 0 0]); % Use edges to the processing (needed for bidirectional scanning).
@@ -120,145 +121,156 @@ if dophotons || dotm
     end
 end
 
-%% Reference
-if dophotons || dotm
-    % Reference
-    ref = median(im_photon,3);
+%% Iterations
+for iter = 1 : p.iterations
+    fprintf('Iterative registration: %i/%i\n', iter, p.iterations);
     
-    % Apply edge
-    if any(p.edges ~= 0)
+    %% Reference
+    if dophotons || dotm
         % Reference
-        ref = ref(p.edges(3)+1:end-p.edges(4), p.edges(1)+1:end-p.edges(2), :);
-        
-        if mod(size(ref,2), p.binxy) ~= 0 || mod(size(ref,1), p.binxy) ~= 0
-            fprintf('Wrong edge values.\n')
-            fprintf('Residual in the first two values: %i.\n', mod(size(ref,2),p.binxy));
-            fprintf('Residual in the last two values: %i.\n', mod(size(ref,1), p.binxy));
-            return;
-        end
-        
-        % Photon data
-        im_photon2 = im_photon(p.edges(3)+1:end-p.edges(4), p.edges(1)+1:end-p.edges(2), :);
-    else
-        % Copy
-        im_photon2 = im_photon;
-    end
-end   
+        ref = median(im_photon,3);
 
-%% Initialize
-if dophotons || dotm
-    fprintf('Initializing arrays...')
-    tic;
-    
-    % Get the meshgrid
-    [xx, yy] = meshgrid(1 : size(im_photon, 2), 1 : size(im_photon, 1));
-    
-    % Initialize registered data (using the grid file xx to get size)
-    photon_reg = zeros(size(xx));
-    photon_reg = repmat(photon_reg, [1, 1, size(im_photon,3)]);
-    tm_reg = photon_reg;
-    
-    % Apply median filter to reference
-    ref = medfilt2(ref, p.medfilt2size, 'symmetric');
-    
-    % Bin ref, if necessary
-    if p.binxy > 1
-        ref = binxy(ref, p.binxy); 
-    end
-    
-    % Highpass and normalize reference
-    n = p.hp_norm_sigmas(1);
-    m = p.hp_norm_sigmas(2);
-    if p.uselocalnorm
-        ref(isnan(ref)) = 0;
-        ref_prime = single(ref)-single(imgaussfilt(double(ref),n));
-        ref = ref_prime ./ (imgaussfilt(ref_prime.^2,m) .^ (1/2));
-        ref(isnan(ref)) = 0;
-    end
-    figure;
-    imshow(ref,[]);
-    
-    % Bin images
-    if p.binxy > 1
-        im_photon2 = binxy(im_photon2, p.binxy);
-    end
-    
-    % Apply median filter and spatial normalization to images
-    for  i = 1:size(im_photon2,3)
-        % Prepare the data by median filtering and local normalizing
-        if ~isempty(p.medfilt2size)
-            im_photon2(:,:,i) = medfilt2(im_photon2(:,:,i), p.medfilt2size, 'symmetric');
+        % Apply edge
+        if any(p.edges ~= 0)
+            % Reference
+            ref = ref(p.edges(3)+1:end-p.edges(4), p.edges(1)+1:end-p.edges(2), :);
+
+            if mod(size(ref,2), p.binxy) ~= 0 || mod(size(ref,1), p.binxy) ~= 0
+                fprintf('Wrong edge values.\n')
+                fprintf('Residual in the first two values: %i.\n', mod(size(ref,2),p.binxy));
+                fprintf('Residual in the last two values: %i.\n', mod(size(ref,1), p.binxy));
+                return;
+            end
+
+            % Photon data
+            im_photon2 = im_photon(p.edges(3)+1:end-p.edges(4), p.edges(1)+1:end-p.edges(2), :);
+        else
+            % Copy
+            im_photon2 = im_photon;
         end
+    end   
+
+    %% Initialize
+    if dophotons || dotm
+        fprintf('Initializing arrays...')
+        tic;
+
+        % Get the meshgrid
+        [xx, yy] = meshgrid(1 : size(im_photon, 2), 1 : size(im_photon, 1));
+
+        % Initialize registered data (using the grid file xx to get size)
+        photon_reg = zeros(size(xx));
+        photon_reg = repmat(photon_reg, [1, 1, size(im_photon,3)]);
+        tm_reg = photon_reg;
+
+        % Apply median filter to reference
+        ref = medfilt2(ref, p.medfilt2size, 'symmetric');
+
+        % Bin ref, if necessary
+        if p.binxy > 1
+            ref = binxy(ref, p.binxy); 
+        end
+
+        % Highpass and normalize reference
+        n = p.hp_norm_sigmas(1);
+        m = p.hp_norm_sigmas(2);
         if p.uselocalnorm
-            f = im_photon2(:,:,i);
-            f(isnan(f)) = 0;
-            f_prime = f - imgaussfilt(single(f),n);
-            g_prime = f_prime ./ (imgaussfilt(f_prime.^2,m).^(1/2));
-
-            g_prime(isnan(g_prime)) = 0;
-
-            im_photon2(:,:,i)=g_prime;
+            ref(isnan(ref)) = 0;
+            ref_prime = single(ref)-single(imgaussfilt(double(ref),n));
+            ref = ref_prime ./ (imgaussfilt(ref_prime.^2,m) .^ (1/2));
+            ref(isnan(ref)) = 0;
         end
-    end
-    
-    % Initialize D_combined
-    D_combined = zeros(size(im_photon2,1), size(im_photon2,2), size(im_photon2,3) * 2);
-    t = toc;
-    fprintf(' Done. Elapsed time: %i seconds.\n', round(t));
-end
+        figure;
+        imshow(ref,[]);
 
-%% Register
-if dophotons || dotm
-    fprintf('Registration...')
-    tic;
-    % Get the D tensor
-    for  i = 1:size(im_photon2,3)
-        % Demons reg
-        [D,~] = imregdemons(im_photon2(:,:,i), ref, [32 16 8 4],...
-                'AccumulatedFieldSmoothing',2.5,'PyramidLevels',4,'DisplayWaitbar',false);
+        % Bin images
+        if p.binxy > 1
+            im_photon2 = binxy(im_photon2, p.binxy);
+        end
 
-        D_combined(:, :, i*2-1 : i*2) = D; 
-    end
+        % Apply median filter and spatial normalization to images
+        for  i = 1:size(im_photon2,3)
+            % Prepare the data by median filtering and local normalizing
+            if ~isempty(p.medfilt2size)
+                im_photon2(:,:,i) = medfilt2(im_photon2(:,:,i), p.medfilt2size, 'symmetric');
+            end
+            if p.uselocalnorm
+                f = im_photon2(:,:,i);
+                f(isnan(f)) = 0;
+                f_prime = f - imgaussfilt(single(f),n);
+                g_prime = f_prime ./ (imgaussfilt(f_prime.^2,m).^(1/2));
 
-    % resize back if necessary
-    if p.binxy > 1
-        D_combined = imresize(p.binxy * D_combined, p.binxy); % resize to bring back to full size of movie
-    end
+                g_prime(isnan(g_prime)) = 0;
 
-    % Re-embed D-combined into the full-size version if using edges
-    if any(p.edges ~= 0)
-        D_combined_full = zeros(size(im_photon,1), size(im_photon,2), size(im_photon,3) * 2);
-        D_combined_full(p.edges(3)+1:end-p.edges(4), p.edges(1)+1:end-p.edges(2), :) = D_combined;
+                im_photon2(:,:,i)=g_prime;
+            end
+        end
 
-        % Use the new D_combined for subsequent processing
-        D_combined = D_combined_full;
-        clear D_combined_full
+        % Initialize D_combined
+        D_combined = zeros(size(im_photon2,1), size(im_photon2,2), size(im_photon2,3) * 2);
+        t = toc;
+        fprintf(' Done. Elapsed time: %i seconds.\n', round(t));
     end
 
-    % Data2 is a large variable
-    clear im_photon2;
-    t = toc;
-    fprintf(' Done. Elapsed time: %i seconds.\n', round(t));
-end
-    
-%% Apply the warp to original movie
-% Apply
-if dophotons || dotm
-    % Reconstruct image stack
-    fprintf('Reconstruct image stack...')
-    for i = 1 : size(im_photon, 3)
-        photon_reg(:,:,i) = ...
-            interp2(xx, yy, im_photon(:,:,i),...
-            xx + D_combined(:,:,2*i-1), yy + D_combined(:,:,2*i));
+    %% Register
+    if dophotons || dotm
+        fprintf('Registration...')
+        tic;
+        % Get the D tensor
+        for  i = 1:size(im_photon2,3)
+            % Demons reg
+            [D,~] = imregdemons(im_photon2(:,:,i), ref, [32 16 8 4],...
+                    'AccumulatedFieldSmoothing',2.5,'PyramidLevels',4,'DisplayWaitbar',false);
 
-        if dotm
-            tm_reg(:,:,i) = ...
-                interp2(xx, yy, im_tm(:,:,i),...
+            D_combined(:, :, i*2-1 : i*2) = D; 
+        end
+
+        % resize back if necessary
+        if p.binxy > 1
+            D_combined = imresize(p.binxy * D_combined, p.binxy); % resize to bring back to full size of movie
+        end
+
+        % Re-embed D-combined into the full-size version if using edges
+        if any(p.edges ~= 0)
+            D_combined_full = zeros(size(im_photon,1), size(im_photon,2), size(im_photon,3) * 2);
+            D_combined_full(p.edges(3)+1:end-p.edges(4), p.edges(1)+1:end-p.edges(2), :) = D_combined;
+
+            % Use the new D_combined for subsequent processing
+            D_combined = D_combined_full;
+            clear D_combined_full
+        end
+
+        % Data2 is a large variable
+        clear im_photon2;
+        t = toc;
+        fprintf(' Done. Elapsed time: %i seconds.\n', round(t));
+    end
+
+    %% Apply the warp to original movie
+    % Apply
+    if dophotons || dotm
+        % Reconstruct image stack
+        fprintf('Reconstruct image stack...')
+        for i = 1 : size(im_photon, 3)
+            photon_reg(:,:,i) = ...
+                interp2(xx, yy, im_photon(:,:,i),...
                 xx + D_combined(:,:,2*i-1), yy + D_combined(:,:,2*i));
+
+            if dotm
+                tm_reg(:,:,i) = ...
+                    interp2(xx, yy, im_tm(:,:,i),...
+                    xx + D_combined(:,:,2*i-1), yy + D_combined(:,:,2*i));
+            end
         end
+        t = toc;
+        fprintf(' Done. Elapsed time: %i seconds.\n', round(t));
     end
-    t = toc;
-    fprintf(' Done. Elapsed time: %i seconds.\n', round(t));
+    
+    %% Prep for next iteration
+    if iter < p.iterations
+        im_photon = photon_reg;
+        im_tm = tm_reg;
+    end
 end
 
 %% Save

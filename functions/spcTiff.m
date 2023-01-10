@@ -8,7 +8,9 @@ p = inputParser;
 addOptional(p, 'server', 'nasquatch');
 addOptional(p, 'user', ''); % user name for path
 addOptional(p, 'slice', false); % Flag if data is slice
+
 addOptional(p, 'cdigit', 1); % Digits used for the "c" components in the file names (1, 2, or 3)
+addOptional(p, 'autoc', false); % Automate cdigit - experimental
 
 % File variables
 addOptional(p, 'photons', true); % Process photons file or not
@@ -50,6 +52,18 @@ end
 % Get paths
 spcpaths = spcPath(mouse, date, run, 'server', p.server, 'user', p.user,...
     'slice', p.slice, 'cdigit', p.cdigit);
+
+% Automate cdigit
+if p.autoc
+    if ~exist(fullfile(spcpaths.fp, sprintf(spcpaths.photons_in, 1)), 'file')
+        % If can't find the first photon file
+        flist = dir(fullfile(spcpaths.fp, sprintf('*_photons.asc')));
+        [cs, ce] = regexp(flist(1).name, 'c\d+_photons');
+        p.cdigit = ce - cs - 8;
+        spcpaths = spcPath(mouse, date, run, 'server', p.server, 'user', p.user,...
+            'slice', p.slice, 'cdigit', p.cdigit);
+    end
+end
 
 %% Check if redo
 % Do photon data?

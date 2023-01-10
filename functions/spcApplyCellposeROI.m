@@ -119,6 +119,9 @@ end
 maskpath = fullfile(spcpaths.fp_out, spcpaths.cp_masks);
 masks = imread(maskpath);
 
+% Initialize a place to hold all the neuropils
+npall = zeros(size(masks));
+
 % Load background
 tosegpath = fullfile(spcpaths.fp_out, spcpaths.cp_toseg);
 movmean = readtiff(tosegpath);
@@ -250,6 +253,7 @@ if p.dotm || p.dophotons
             
             % Save neuropil
             cellsort_spc(irealcell).neuropil = npcurr;
+            npall = npall + npcurr;
             
             % Save neuropil area
             cellsort_spc(irealcell).neuropilarea = nparea;
@@ -391,6 +395,26 @@ if p.saverefim
     end
     
     saveas(gcf, fullfile(spcpaths.fp_out, spcpaths.run_ROI_ref));
+    
+    % Make neuropil rgb
+    nprgb = repmat(mat2gray(movmean), [1 1 3]);
+    ROIs_bin = mat2gray(npall >= 1);
+    nprgb(:,:,1) = nprgb(:,:,1) + ROIs_bin;
+
+    % Show rgb
+    figure
+    imshow(nprgb);
+    
+    % Label
+    for i = 1 : ncells
+        if sum(sum(masks == i)) > 0
+            cen = regionprops(masks == i, 'Centroid');
+            cen = cen.Centroid;
+            text(cen(1), cen(2), num2str(i), 'Color', [0 0 0], 'FontSize', 14);
+        end
+    end
+    
+    saveas(gcf, fullfile(spcpaths.fp_out, spcpaths.run_npROI_ref));
 end
 
 if p.savetmcsv

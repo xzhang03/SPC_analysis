@@ -127,6 +127,10 @@ spcpaths.tm_csv = sprintf('%s_%s_%s%i_tm.csv', date, mouse, RunOrSlice, ...
 spcpaths.run_ROI_ref = sprintf('%s_%s_%s%i_ROIRefs.tif', date, mouse, RunOrSlice, ...
     run);
 
+% Run ROI ref
+spcpaths.run_npROI_ref = sprintf('%s_%s_%s%i_npROIRefs.tif', date, mouse, RunOrSlice, ...
+    run);
+
 %% Cross-expt output file
 if p.multifov
     % Multiple fovs
