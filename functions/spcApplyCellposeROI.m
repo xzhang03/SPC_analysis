@@ -144,6 +144,9 @@ if p.GRIN
                     'slice', p.slice, 'cdigit', p.cdigit);
                 loaded = load(fullfile(spcpath_grin.fp_out, spcpath_grin.signals), '-mat', 'psig');
                 p.grinface = loaded.psig.grinface;
+            else
+                p.grinface = getpoly(movmean, 'Select the face of the GRIN lens.');
+                p.grinface = p.grinface;
             end
         else
             p.grinface = getpoly(movmean, 'Select the face of the GRIN lens.');
