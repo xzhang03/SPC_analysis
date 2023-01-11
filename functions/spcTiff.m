@@ -62,6 +62,7 @@ if p.autoc
         p.cdigit = ce - cs - 8;
         spcpaths = spcPath(mouse, date, run, 'server', p.server, 'user', p.user,...
             'slice', p.slice, 'cdigit', p.cdigit);
+        fprintf('cdigit updated to %i\n', p.cdigit);
     end
 end
 

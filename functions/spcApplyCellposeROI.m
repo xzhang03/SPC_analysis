@@ -49,6 +49,7 @@ addOptional(p, 'savetmcsv', true);
 % GRIN
 addOptional(p, 'GRIN', false); % Remove anything that is not within the GRIN surface
 addOptional(p, 'reusegrinface', true); % Try to reuse grin face from a previous run
+addOptional(p, 'reusegrinfacerun', []); % The rune to use grin face from
 addOptional(p, 'grinface', []); % Pass the face of the GRIN lens here if you don't want manual selection
 
 % Unpack if needed
@@ -132,9 +133,18 @@ ncells = double(max(masks(:)));
 % Get the face of GRIN
 if p.GRIN
     if isempty(p.grinface)
-        if p.reusegrinface && exist(sigpath, 'file')
-            loaded = load(sigpath, '-mat', 'psig');
-            p.grinface = loaded.psig.grinface;
+        if p.reusegrinface 
+            if isempty(p.reusegrinfacerun) && exist(sigpath, 'file')
+                % Reuse grin face from a previous analysis
+                loaded = load(sigpath, '-mat', 'psig');
+                p.grinface = loaded.psig.grinface;
+            elseif ~isempty(p.reusegrinfacerun)
+                % Reuse grin face from a different run
+                spcpath_grin = spcPath(mouse, date, p.reusegrinfacerun, 'server', p.server, 'user', p.user,...
+                    'slice', p.slice, 'cdigit', p.cdigit);
+                loaded = load(fullfile(spcpath_grin.fp_out, spcpath_grin.signals), '-mat', 'psig');
+                p.grinface = loaded.psig.grinface;
+            end
         else
             p.grinface = getpoly(movmean, 'Select the face of the GRIN lens.');
             p.grinface = p.grinface;
@@ -370,7 +380,8 @@ end
 
 %% Save to file
 % Save structure
-sigstruct = struct('cellsort_spc', cellsort_spc, 'psig', p, 'movmean', movmean, 'masks', masks);
+sigstruct = struct('cellsort_spc', cellsort_spc, 'psig', p, 'movmean', movmean,...
+    'masks', masks, 'neuropil', npall);
 
 % Save file
 save(sigpath, '-struct', 'sigstruct', '-v7.3');
