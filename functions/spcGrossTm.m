@@ -1,5 +1,6 @@
-function tm = spcGrossTm(mouse, date, run, varargin)
-% spcGrossTm estimates gross Tm of a file (full fov)
+function [tm, trace, photontrace] = spcGrossTm(mouse, date, run, varargin)
+% spcGrossTm estimates gross Tm of a file
+% [tm, trace, photontrace] = spcGrossTm(mouse, date, run, varargin)
 
 %% Parse inputs
 p = inputParser;
@@ -17,6 +18,7 @@ addOptional(p, 'binxy', 1); % Binning
 
 % Edge
 addOptional(p, 'edges', [0 0 0 0]); % Use edges to the processing (needed for bidirectional scanning).
+addOptional(p, 'ROI',false);
 
 % Make plot
 addOptional(p, 'makeplot', false); % Make histogram
@@ -25,7 +27,11 @@ addOptional(p, 'makeplot', false); % Make histogram
 addOptional(p, 'dropoutthrehsold', 500); % Values below which are dropped out
 
 % Smoothing for trace
+addOptional(p, 'smoothmethod', @movmedian);
 addOptional(p, 'smoothwin', 30);
+
+% Photon trace
+addOptional(p, 'photontrace', true);
 
 % Figure position
 addOptional(p, 'pos', [600 500 1000 420]);
@@ -85,7 +91,9 @@ end
 
 % Read
 im_tm = readtiff(fp_tm);
-
+if p.photontrace || p.ROI
+    im_photon = readtiff(fp_photon);
+end
 
 %% Preprocessing
 % Edge
@@ -95,6 +103,25 @@ end
 
 % Bin
 im_tm = binxy(im_tm, p.binxy);
+if p.photontrace || p.ROI
+    im_photon = binxy(im_photon, p.binxy);
+end
+%% ROI
+if p.ROI
+    % Read
+    ROI = getpoly(mean(im_photon,3));
+    for i = 1 : size(im_tm,3)
+        f = im_tm(:,:,i);
+        f(~ROI) = nan;
+        im_tm(:,:,i) = f;
+        
+        if p.photontrace
+            f = im_photon(:,:,i);
+            f(~ROI) = nan;
+            im_photon(:,:,i) = f;
+        end
+    end
+end
 
 %% Reshape
 % Reshape
@@ -102,22 +129,41 @@ im_tm = binxy(im_tm, p.binxy);
 im_tm2 = reshape(im_tm, [x*y*z 1]);
 im_tm2 = im_tm2(im_tm2 >= p.dropoutthrehsold);
 
-tm = mean(im_tm2);
+tm = nanmean(im_tm2);
 
 %% Get timecourse
 % Time course
 trace = zeros(z,1);
 for i = 1 : z
     f = im_tm(:,:,i);
-    trace(i) = mean(f(f >= p.dropoutthrehsold));
+    trace(i) = nanmean(f(f >= p.dropoutthrehsold));
 end
-trace = movmedian(trace, p.smoothwin);
+if p.smoothwin > 1
+    trace = p.smoothmethod(trace, p.smoothwin);
+end
+
+%% Get photon timecourse
+if p.photontrace
+    % Time course
+    photontrace = zeros(z,1);
+    for i = 1 : z
+        photontrace(i) = nanmean(nanmean(im_photon(:,:,i)));
+    end
+    if p.smoothwin > 1
+        photontrace = p.smoothmethod(photontrace, p.smoothwin);
+    end
+else
+    photontrace = [];
+end
 
 %% Plot
 if p.makeplot
+    % Panels
+    npanels = 2+p.photontrace;
+    
     % Histogram
     figure('Position', p.pos)
-    subplot(1,2,1)
+    subplot(1,npanels,1)
     hist(im_tm2, 1000);
     title(sprintf('%s %s run%i Tm histogram', mouse, date, run));
     
@@ -131,12 +177,14 @@ if p.makeplot
         'FontSize', 15, 'Color', 'r');
     
     % Subplot 2
-    subplot(1,2,2);
+    subplot(1,npanels,2);
     plot(trace)
     
+    if p.photontrace
+        subplot(1,npanels,3);
+        plot(photontrace)
+    end
+    
 end
-
-
-
 
 end
