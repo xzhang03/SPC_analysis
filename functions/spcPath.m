@@ -56,6 +56,10 @@ spcpaths.fp = sprintf('\\\\%s\\data\\2p\\%s\\%s\\%s_%s\\FLIM\\%s_%s_%s%i', p.ser
 % Names based on the number of c digits
 cstring = sprintf('c%%0%id', p.cdigit);
 
+% Raw sdt file
+spcpaths.sdt_in = sprintf('%s_%s_%s%i_%s.sdt', date, mouse, RunOrSlice, run,...
+    cstring);
+
 % Tm input file
 spcpaths.tm_in = sprintf('%s_%s_%s%i_%s_t1.asc', date, mouse, RunOrSlice, run,...
     cstring);
@@ -70,7 +74,7 @@ spcpaths.cp_masks = sprintf('%s_%s_%s%i_toseg_cp_masks.png', date, mouse, RunOrS
 
 %% Get the c indices
 % Dir
-flist = dir(fullfile(spcpaths.fp,'*.img'));
+flist = dir(fullfile(spcpaths.fp,'*.sdt'));
 
 % Get the indices
 spcpaths.n = size(flist,1);
@@ -87,6 +91,14 @@ if exist(fp_parent, 'dir') && ~exist(spcpaths.fp_out, 'dir')
     mkdir(spcpaths.fp_out);
 end
 
+% Load parameters (spcTiff_sdt)
+spcpaths.loadparams = sprintf('%s_%s_%s%i_loadparams.mat', date, mouse, RunOrSlice, ...
+    run);
+
+% Load parameters (spcTiff_sdt)
+spcpaths.peak = sprintf('%s_%s_%s%i_peak.mat', date, mouse, RunOrSlice, ...
+    run);
+
 % Tm output files
 spcpaths.tif_tm = sprintf('%s_%s_%s%i_tm.tif', date, mouse, RunOrSlice, ...
     run);
@@ -95,6 +107,16 @@ spcpaths.regtif_tm = sprintf('%s_%s_%s%i_tm_reg.tif', date, mouse, RunOrSlice, .
 spcpaths.warptif_tm = sprintf('%s_%s_%s%i_tm_warp.tif', date, mouse, RunOrSlice, ...
     run);
 spcpaths.demregtif_tm = sprintf('%s_%s_%s%i_tm_demreg.tif', date, mouse, RunOrSlice, ...
+    run);
+
+% IEM output files
+spcpaths.tif_iem = sprintf('%s_%s_%s%i_iem.tif', date, mouse, RunOrSlice, ...
+    run);
+spcpaths.regtif_iem = sprintf('%s_%s_%s%i_iem_reg.tif', date, mouse, RunOrSlice, ...
+    run);
+spcpaths.warptif_iem = sprintf('%s_%s_%s%i_iem_warp.tif', date, mouse, RunOrSlice, ...
+    run);
+spcpaths.demregtif_iem = sprintf('%s_%s_%s%i_iem_demreg.tif', date, mouse, RunOrSlice, ...
     run);
 
 % Photon output files
