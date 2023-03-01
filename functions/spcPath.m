@@ -96,7 +96,7 @@ spcpaths.loadparams = sprintf('%s_%s_%s%i_loadparams.mat', date, mouse, RunOrSli
     run);
 
 % Load parameters (spcTiff_sdt)
-spcpaths.peak = sprintf('%s_%s_%s%i_peak.mat', date, mouse, RunOrSlice, ...
+spcpaths.peek = sprintf('%s_%s_%s%i_peek.mat', date, mouse, RunOrSlice, ...
     run);
 
 % Tm output files

@@ -1,6 +1,6 @@
-function savestruct = spcPeaksdt(mouse, date, run, varargin)
-% spcPeaksdt superficially peaks at raw sdt data
-% savestruct = spcPeaksdt(mouse, date, run, varargin)
+function savestruct = spcPeeksdt(mouse, date, run, varargin)
+% spcPeeksdt superficially peeks at raw sdt data
+% savestruct = spcPeeksdt(mouse, date, run, varargin)
 
 %% Parse inputs
 p = inputParser;
@@ -95,8 +95,8 @@ end
 
 %% Initialize
 if p.frommat
-    if exist(fullfile(spcpaths.fp_out, spcpaths.peak), 'file')
-        savestruct = load(fullfile(spcpaths.fp_out, spcpaths.peak));
+    if exist(fullfile(spcpaths.fp_out, spcpaths.peek), 'file')
+        savestruct = load(fullfile(spcpaths.fp_out, spcpaths.peek));
         fprintf('Loaded from previous mat.\n');
         donew = false;
         p.save = false;
@@ -204,7 +204,7 @@ if p.save
     savestruct = struct('photontrace', photontrace, 'tmtrace', tmtrace, 'iemtrace', iemtrace, 'tracemat',...
         tracemat, 'tracedcmat', tracedcmat, 'p', p);
     
-    save(fullfile(spcpaths.fp_out, spcpaths.peak), '-struct', 'savestruct', '-v7.3');
+    save(fullfile(spcpaths.fp_out, spcpaths.peek), '-struct', 'savestruct', '-v7.3');
     disp('Saved');
 end
 
