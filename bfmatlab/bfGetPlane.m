@@ -69,6 +69,8 @@ ip.addOptional('x', 1, isValidX);
 ip.addOptional('y', 1, isValidY);
 ip.addOptional('width', r.getSizeX(), isValidWidth);
 ip.addOptional('height', r.getSizeY(), isValidHeight);
+% ip.addOptional('width', r.getSizeX());
+% ip.addOptional('height', r.getSizeY());
 ip.parse(r, varargin{:});
 
 % Get pixel type

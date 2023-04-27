@@ -60,6 +60,10 @@ cstring = sprintf('c%%0%id', p.cdigit);
 spcpaths.sdt_in = sprintf('%s_%s_%s%i_%s.sdt', date, mouse, RunOrSlice, run,...
     cstring);
 
+% Sparse Matrix Compression file
+spcpaths.smc = sprintf('%s_%s_%s%i_%s_smc.mat', date, mouse, RunOrSlice, run,...
+    cstring);
+
 % Tm input file
 spcpaths.tm_in = sprintf('%s_%s_%s%i_%s_t1.asc', date, mouse, RunOrSlice, run,...
     cstring);

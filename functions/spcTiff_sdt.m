@@ -18,9 +18,6 @@ addOptional(p, 'tm', true); % Make tm file or not
 addOptional(p, 'iem', true); % Make iem files or not
 addOptional(p, 'force', false); % Force overwrite or not
 
-% Imaage unscrambling
-addOptional(p, 'rowinc', 2044.72); % This is the key variable to descramble images. Fine adjust for shearing
-
 % Crop
 addOptional(p, 'crop', []);
 
@@ -33,9 +30,11 @@ addOptional(p, 'threshold', 5); % Peak has to be above this number for tm and ie
 addOptional(p, 'bin_tm', 5); % Square binning for tm calculation. Edge 2x+1
 addOptional(p, 'bin_iem', 5); % Square binning for tm calculation. Edge 2x+1
 
-% Resize (non-linear, correct for warping)
-addOptional(p, 'resize', true);
-addOptional(p, 'resizedim', [511 1250]);
+% Resize (Cropping at loading stage)
+addOptional(p, 'resizedim', [512 1250]);
+
+% Compress
+addOptional(p, 'compress', true); % First time it will make compression file, later reading it
 
 % IRF
 addOptional(p, 'deconvforiem', false); % If set true it takes 10x as long
@@ -179,10 +178,24 @@ hwait = waitbar(0);
 for ind = spcpaths.cinds
     % Load movie
     tic
-    if p.resize
-        mov = spcLoadsdt(fullfile(spcpaths.fp, sprintf(spcpaths.sdt_in,ind)), p.rowinc, p.resizedim);
+    if p.compress
+        usesmc = exist(fullfile(spcpaths.fp, sprintf(spcpaths.smc,ind)), 'file');
     else
-        mov = spcLoadsdt(fullfile(spcpaths.fp, sprintf(spcpaths.sdt_in,ind)), p.rowinc, []);
+        usesmc = false;
+    end
+    
+    if usesmc
+        % Load sparse matrix compression file
+        smc = load(fullfile(spcpaths.fp, sprintf(spcpaths.smc,ind)), "-mat");
+        mov = spcDecompress(smc);
+    else
+        mov = spcLoadsdt(fullfile(spcpaths.fp, sprintf(spcpaths.sdt_in,ind)), 'crop', p.resizedim);
+
+        if p.compress
+            % Save smc for future
+            smc = spcCompress(mov);
+            save(fullfile(spcpaths.fp, sprintf(spcpaths.smc,ind)), 'smc', '-v7.3');
+        end
     end
     t = toc;
     fprintf('Loaded Frame %i in %0.2f s.\n', ind, t);

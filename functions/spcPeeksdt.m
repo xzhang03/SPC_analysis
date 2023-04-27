@@ -13,8 +13,8 @@ addOptional(p, 'cdigit', 1); % Digits used for the "c" components in the file na
 addOptional(p, 'autoc', false); % Automate cdigit - experimental
 addOptional(p, 'frommat', true); % Loda from mat if exists
 
-% Imaage unscrambling
-addOptional(p, 'rowinc', 2044.72); % This is the key variable to descramble images. Fine adjust for shearing
+% Compress
+addOptional(p, 'compress', true); % First time it will make compression file, later reading it
 
 % Time domain: tm and iem
 addOptional(p, 'tbins', 256); % Time bins
@@ -22,9 +22,8 @@ addOptional(p, 'tcycle', 12500); % in ps
 addOptional(p, 'T1', 21); % data before this is not considered for tm and iem
 addOptional(p, 'T2', 240); % data after this is not considered for tm and iem
 
-% Resize (non-linear, correct for warping)
-addOptional(p, 'resize', true);
-addOptional(p, 'resizedim', [511 1250]);
+% Resize (cropping)
+addOptional(p, 'resizedim', [512 1250]);
 
 % IRF
 addOptional(p, 'deconvforiem', false); % If set true it takes 10x as long
@@ -132,13 +131,28 @@ if donew
     hwait = waitbar(0);
     for ind = spcpaths.cinds
         waitbar(ind/spcpaths.n, hwait, sprintf('Processing %s %s run%i: %i/%i', mouse, date, run, ind, spcpaths.n));
-
+        
         % Load movie
         tic
-        if p.resize
-            mov = spcLoadsdt(fullfile(spcpaths.fp, sprintf(spcpaths.sdt_in,ind)), p.rowinc, p.resizedim);
+        
+        if p.compress
+            usesmc = exist(fullfile(spcpaths.fp, sprintf(spcpaths.smc,ind)), 'file');
         else
-            mov = spcLoadsdt(fullfile(spcpaths.fp, sprintf(spcpaths.sdt_in,ind)), p.rowinc, []);
+            usesmc = false;
+        end
+
+        if usesmc
+            % Load sparse matrix compression file
+            smc = load(fullfile(spcpaths.fp, sprintf(spcpaths.smc,ind)), "-mat");
+            mov = spcDecompress(smc);
+        else
+            mov = spcLoadsdt(fullfile(spcpaths.fp, sprintf(spcpaths.sdt_in,ind)), 'crop', p.resizedim);
+            
+            if p.compress
+                % Save smc for future
+                smc = spcCompress(mov);
+                save(fullfile(spcpaths.fp, sprintf(spcpaths.smc,ind)), 'smc', '-v7.3');
+            end
         end
         t = toc;
         fprintf('Loaded Frame %i in %0.2f s.\n', ind, t);
