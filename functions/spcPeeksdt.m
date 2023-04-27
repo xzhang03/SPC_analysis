@@ -268,7 +268,7 @@ title(sprintf('IEM'));
 
 % Decay
 subplot(1,npanels,8)
-hdecay = plot(tvec(1:20), decay(1:20));
+hdecay = plot(tvec(1:40), decay(1:40));
 title(sprintf('Decay'));
 
 % Controls
@@ -438,8 +438,8 @@ uicontrol(hpan,'Style','pushbutton','Position', vp5 - [0 20 0 0], 'String',...
         hiem.YData = iemtrace;
         hiem.Parent.YLim = [min(iemtrace) max(iemtrace)];
         
-        hdecay.YData = decay(1:20);
-        hdecay.Parent.YLim = [min(decay(1:20)) max(decay(1:20))];
+        hdecay.YData = decay(1:40);
+        hdecay.Parent.YLim = [min(decay(1:40)) max(decay(1:40))];
         
         hwaitmsg.String = '';
     end
