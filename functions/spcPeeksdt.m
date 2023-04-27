@@ -31,7 +31,8 @@ addOptional(p, 'binxy', 1);
 addOptional(p, 'bint', 1);
 
 % Default thresholding
-addOptional(p, 'thresh', [500 9000]); % Default thresh
+addOptional(p, 'thresh', [500 9000]); % Default tm thresh
+addOptional(p, 'phthresh', [0 20]);  % Default photonthresh
 
 % IRF
 addOptional(p, 'deconvforiem', false); % If set true it takes 10x as long
@@ -42,7 +43,6 @@ addOptional(p, 'makeplot', true);
 addOptional(p, 'pos', [50 500 1800 420]);
 addOptional(p, 'smoothwin', 3); % Change to 0 for no smoothing
 addOptional(p, 'tmLUT', [0 3500]);
-addOptional(p, 'phLUT', [0 120]);
 
 % Unpack if needed
 if iscell(varargin) && size(varargin,1) * size(varargin,2) == 1
@@ -77,7 +77,7 @@ end
 
 %% Time vectors
 % Time resolution
-tres = p.tcycle / p.tbins;
+tres = p.tcycle / p.tbins * p.bint;
 
 % Time vector
 ivec = round(p.T1/p.bint : p.T2/p.bint)';
@@ -213,11 +213,14 @@ end
 
 %% Prepare for plotting
 % Threshold
-[mov4dthresh, tm3dthresh] = applytmthresh(mov4d, tm3d, p.thresh);
+[mov4dthresh, tm3dthresh, failmask] = applytmthresh(mov4d, tm3d, p.thresh, p.phthresh);
 
 % Calculations
 [fov,tmfov, photontrace, tmtrace, iemtrace, decay] = datacal(mov4dthresh, tm3dthresh, p.irf, tvec, tres);
-        
+
+% RGB fov
+rgbfov = makergbfov(fov, failmask);
+
 %% Plot
 % Panels
 npanels = 8;
@@ -225,10 +228,7 @@ hfig = figure('Position', p.pos);
 
 % Photon image
 subplot(1,npanels,1:2)
-hfov = imshow(fov, []);
-if isempty(p.phLUT)
-    p.phLUT = round(hfov.Parent.CLim);
-end
+hfov = imshow(rgbfov);
 title(sprintf('%s %s run%i Photons', mouse, date, run));
 
 % tm image
@@ -275,23 +275,24 @@ title(sprintf('Decay'));
 % Panel
 hpan = uipanel(hfig,'Position',[0.0100 0.1000 0.0900 0.8500]);
 
-% Photon LUT
-vp1 = [20 320 100 20];
-uicontrol(hpan, 'Style', 'text', 'Position', vp1, 'String', 'Photon LUT:')
-uicontrol(hpan, 'Style', 'text', 'Position', vp1 - [0 22 0 0], 'String', '-')
-hphLUT1 = uicontrol(hpan,'Style','edit','Position', vp1 - [0 20 60 0], 'String', num2str(p.phLUT(1)),...
-    'callback', @phLUTchange);
-hphLUT2 = uicontrol(hpan,'Style','edit','Position', vp1 - [-60 20 60 0], 'String', num2str(p.phLUT(2)),...
-    'callback', @phLUTchange);
-
 % Tm LUT
+vp1 = [20 320 100 20];
+uicontrol(hpan, 'Style', 'text', 'Position', vp1, 'String', 'Tm LUT:')
+uicontrol(hpan, 'Style', 'text', 'Position', vp1 - [0 22 0 0], 'String', '-')
+htmLUT1 = uicontrol(hpan,'Style','edit','Position', vp1 - [0 20 60 0], 'String', num2str(p.tmLUT(1)),...
+    'callback', @tmLUTchange);
+htmLUT2 = uicontrol(hpan,'Style','edit','Position', vp1 - [-60 20 60 0], 'String', num2str(p.tmLUT(2)),...
+    'callback', @tmLUTchange);
+
+% Photon thresh
 vp2 = [20 260 100 20];
-uicontrol(hpan, 'Style', 'text', 'Position', vp2, 'String', 'Tm LUT:')
+uicontrol(hpan, 'Style', 'text', 'Position', vp2, 'String', 'Photon thresh:')
 uicontrol(hpan, 'Style', 'text', 'Position', vp2 - [0 22 0 0], 'String', '-')
-htmLUT1 = uicontrol(hpan,'Style','edit','Position', vp2 - [0 20 60 0], 'String', num2str(p.tmLUT(1)),...
-    'callback', @tmLUTchange);
-htmLUT2 = uicontrol(hpan,'Style','edit','Position', vp2 - [-60 20 60 0], 'String', num2str(p.tmLUT(2)),...
-    'callback', @tmLUTchange);
+hpthresh1 = uicontrol(hpan,'Style','edit','Position', vp2 - [0 20 60 0], 'String', num2str(p.phthresh(1)),...
+    'callback', @threshchange);
+hpthresh2 = uicontrol(hpan,'Style','edit','Position', vp2 - [-60 20 60 0], 'String', num2str(p.phthresh(2)),...
+    'callback', @threshchange);
+
 
 % Tm thresh
 vp3 = [20 200 100 20];
@@ -307,7 +308,7 @@ vp4 = [20 140 100 20];
 hwaitmsg = uicontrol(hpan, 'Style', 'text', 'Position', vp4, 'String', '', 'FontSize', 12);
 
 % Save
-vp5 = [20 100 100 20];
+vp5 = [20 50 100 20];
 uicontrol(hpan,'Style','pushbutton','Position', vp5, 'String',...
     'Save', 'callback', @savedata);
 
@@ -334,16 +335,21 @@ uicontrol(hpan,'Style','pushbutton','Position', vp5 - [0 20 0 0], 'String',...
 
     % Anonymous functions
     % Apply threshold
-    function [mov4d, tm3d] = applytmthresh(mov4d, tm3d, thresh)
+    function [mov4d, tm3d, failmask] = applytmthresh(mov4d, tm3d, tmthresh, phthresh)
         % Get what passes
-        tm3dfail = (tm3d < thresh(1)) | (tm3d > thresh(2));
+        tm3dfail1 = (tm3d < tmthresh(1)) | (tm3d > tmthresh(2));
+        fovhere = sum(sum(mov4d,3), 4);
+        tm3dfail2 = (fovhere < phthresh(1)) | (fovhere > phthresh(2));
+        tm3dfail = tm3dfail1 | tm3dfail2;
+        
+        % Reshape passes
         mov4dfail = reshape(tm3dfail, [size(tm3dfail,1), size(tm3dfail,2), 1, size(tm3dfail,3)]);
         mov4dfail = repmat(mov4dfail, [1 1 size(mov4d, 3) 1]);
 
         % Apply to tm3d
         tm3d(tm3dfail) = nan;
         mov4d(mov4dfail) = 0;
-
+        failmask = mean(tm3dfail, 3);
     end
 
     % Main calculation
@@ -378,6 +384,13 @@ uicontrol(hpan,'Style','pushbutton','Position', vp5 - [0 20 0 0], 'String',...
         
     end
 
+    % make RGB fov
+    function rgbfov = makergbfov(fov, failmask)
+        fov = mat2gray(fov);
+        rgbfov = repmat(fov, [1 1 3]);
+        rgbfov(:,:,1) = failmask;
+    end
+
     % Change threshold
     function threshchange(~,~)
         hwaitmsg.String = 'Calculating...';
@@ -388,14 +401,22 @@ uicontrol(hpan,'Style','pushbutton','Position', vp5 - [0 20 0 0], 'String',...
         thresh2 = str2double(hthresh2.String);
         p.thresh = [thresh1, thresh2];
         
+        % Change photon threshold values
+        phthresh1 = str2double(hpthresh1.String);
+        phthresh2 = str2double(hpthresh2.String);
+        p.phthresh = [phthresh1, phthresh2];
+        
         % Threshold
-        [mov4dthresh, tm3dthresh] = applytmthresh(mov4d, tm3d, p.thresh);
+        [mov4dthresh, tm3dthresh, failmask] = applytmthresh(mov4d, tm3d, p.thresh, p.phthresh);
 
         % Calculations
         [fov,tmfov, photontrace, tmtrace, iemtrace, decay] = datacal(mov4dthresh, tm3dthresh, p.irf, tvec, tres);
         
+        % RGB fov
+        rgbfov = makergbfov(fov, failmask);
+
         % Update
-        hfov.CData = fov;
+        hfov.CData = rgbfov;
         htmfov.CData = tmfov;
         
         % Update traces
@@ -421,14 +442,6 @@ uicontrol(hpan,'Style','pushbutton','Position', vp5 - [0 20 0 0], 'String',...
         hdecay.Parent.YLim = [min(decay(1:20)) max(decay(1:20))];
         
         hwaitmsg.String = '';
-    end
-
-    % Photon LUT
-    function phLUTchange(~, ~)
-        LUTlower = str2double(hphLUT1.String);
-        LUTupper = str2double(hphLUT2.String);
-        p.phLUT = [LUTlower LUTupper];
-        hfov.Parent.CLim = p.phLUT;
     end
 
     % Photon LUT
