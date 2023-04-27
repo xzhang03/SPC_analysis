@@ -54,7 +54,7 @@ header.reserved2 = fread(fp,1,'ushort');
 header.chksum = fread(fp,1,'ushort');
 
 % check header
-if(header.header_valid ~= 0x5555)
+if header.header_valid ~= hex2dec('5555')
     fclose(fp);
     error('Invalid file header');
 end
