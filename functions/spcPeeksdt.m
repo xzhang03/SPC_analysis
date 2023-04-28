@@ -31,8 +31,8 @@ addOptional(p, 'binxy', 1);
 addOptional(p, 'bint', 1);
 
 % Default thresholding
-addOptional(p, 'thresh', [500 9000]); % Default tm thresh
-addOptional(p, 'phthresh', [0 20]);  % Default photonthresh
+addOptional(p, 'thresh', [0 9000]); % Default tm thresh
+addOptional(p, 'phthresh', [0 60]);  % Default photonthresh
 
 % IRF
 addOptional(p, 'deconvforiem', false); % If set true it takes 10x as long
@@ -307,33 +307,99 @@ hthresh2 = uicontrol(hpan,'Style','edit','Position', vp3 - [-60 20 60 0], 'Strin
 vp4 = [20 140 100 20];
 hwaitmsg = uicontrol(hpan, 'Style', 'text', 'Position', vp4, 'String', '', 'FontSize', 12);
 
-% Save
-vp5 = [20 50 100 20];
+% ROI
+vp5 = [20 90 100 20];
 uicontrol(hpan,'Style','pushbutton','Position', vp5, 'String',...
+    'ROI', 'callback', @checkroi);
+
+% Save screenshot
+uicontrol(hpan,'Style','pushbutton','Position', vp5 - [0 40 0 0], 'String',...
+    'Screenshot', 'callback', @savescreenshot);
+
+% Save
+uicontrol(hpan,'Style','pushbutton','Position', vp5 - [0 60 0 0], 'String',...
     'Save', 'callback', @savedata);
 
 % Quit
-uicontrol(hpan,'Style','pushbutton','Position', vp5 - [0 20 0 0], 'String',...
+uicontrol(hpan,'Style','pushbutton','Position', vp5 - [0 80 0 0], 'String',...
     'Quit', 'callback', @quit);
 
-
 %% Anonymous functions
-    function savedata(src, ~)
-        hwaitmsg.String = 'Saving...';
-        drawnow();
-        
-        % Save struct
-        savestruct = struct('mov_compressed', spcCompress(mov4d), 'tm3d', tm3d, 'tres', tres, 'ivec', ivec,...
-            'tvec', tvec, 'mouse', mouse, 'date', date, 'run', run, 'p', p);
-
-        save(fullfile(spcpaths.fp_out, spcpaths.peek), '-struct', 'savestruct', '-v7.3');
-        disp('Saved');
-        
-        hwaitmsg.String = '';
-        src.String = 'Data saved';
-    end
-
     % Anonymous functions
+    function checkroi(~,~)
+        figure(hfig);
+        subplot(1,npanels,1:2)
+        hrect = imrect();
+        coords = round(wait(hrect));
+        coords(3) = min(coords(1) + coords(3), size(fov,2));
+        coords(1) = max(coords(1),1);
+        coords(4) = min(coords(2) + coords(4), size(fov,1));
+        coords(2) = max(coords(2),1);
+        delete(hrect);
+        
+        % New figure
+        figure('Position', p.pos - [0 p.pos(4) 0 0]);
+        
+        % Fov new
+        subplot(1,npanels,1:2)
+        imshow(rgbfov);
+        rectangle('Position', [coords(1) coords(2) coords(3)-coords(1) coords(4)-coords(2)],...
+            'EdgeColor','g', 'LineWidth',2)
+        title(sprintf('%s %s run%i Photons', mouse, date, run));
+        
+        % tm image
+        subplot(1,npanels,3:4)
+        htmfov = imshow(tmfov, p.tmLUT);
+        rectangle('Position', [coords(1) coords(2) coords(3)-coords(1) coords(4)-coords(2)],...
+            'EdgeColor','g', 'LineWidth',2)
+        title(sprintf('%s %s run%i Tm', mouse, date, run));
+        
+        % Cropping
+        mov4d_crop = mov4d(coords(2):coords(4), coords(1):coords(3), :, :);
+        mov4dthresh_crop = mov4dthresh(coords(2):coords(4), coords(1):coords(3), :, :);
+        tm3d_crop = tm3d(coords(2):coords(4), coords(1):coords(3), :);
+        tm3dthresh_crop = tm3dthresh(coords(2):coords(4), coords(1):coords(3), :);
+        
+        % Calculate cropped
+        [~,~, photontrace_crop, tmtrace_crop, iemtrace_crop, decay_crop] = ...
+            datacal(mov4d_crop, tm3d_crop, p.irf, tvec, tres);
+        [~,~, photontrace_thresh_crop, tmtrace_thresh_crop, iemtrace_thresh_crop, decay_thresh_crop] = ...
+            datacal(mov4dthresh_crop, tm3dthresh_crop, p.irf, tvec, tres);
+        
+        % Photon
+        subplot(1,npanels,5)
+        if p.smoothwin > 0
+            plot(movmean([photontrace_thresh_crop, photontrace_crop], p.smoothwin, 1));
+        else
+            plot([photontrace_thresh_crop, photontrace_crop]);
+        end
+        title(sprintf('Photons'));
+
+        % Tm
+        subplot(1,npanels,6)
+        if p.smoothwin > 0
+            plot(movmean([tmtrace_thresh_crop', tmtrace_crop'], p.smoothwin, 1));
+        else
+            plot([tmtrace_thresh_crop', tmtrace_crop']);
+        end
+        title(sprintf('Tm'));
+
+        % IEM
+        subplot(1,npanels,7)
+        if p.smoothwin > 0
+           plot(movmean([iemtrace_thresh_crop, iemtrace_crop], p.smoothwin, 1));
+        else
+           plot([iemtrace_thresh_crop, iemtrace_crop]);
+        end
+        title(sprintf('IEM'));
+
+        % Decay
+        subplot(1,npanels,8)
+        plot(tvec(1:40), [decay_thresh_crop(1:40), decay_crop(1:40)]);
+        title(sprintf('Decay'));
+        legend({'Thresholded', 'Raw'}, 'Location', 'northeast');
+    end
+    
     % Apply threshold
     function [mov4d, tm3d, failmask] = applytmthresh(mov4d, tm3d, tmthresh, phthresh)
         % Get what passes
@@ -452,6 +518,27 @@ uicontrol(hpan,'Style','pushbutton','Position', vp5 - [0 20 0 0], 'String',...
         htmfov.Parent.CLim = p.tmLUT;
     end
     
+    function savescreenshot(~,~)
+        [~, peekname, ~] = fileparts(spcpaths.peek);
+        peekname_full = fullfile(spcpaths.fp_out, sprintf('%s.png', peekname));
+        saveas(hfig, peekname_full, 'png');
+    end
+
+    function savedata(src, ~)
+        hwaitmsg.String = 'Saving...';
+        drawnow();
+
+        % Save struct
+        savestruct = struct('mov_compressed', spcCompress(mov4d), 'tm3d', tm3d, 'tres', tres, 'ivec', ivec,...
+            'tvec', tvec, 'mouse', mouse, 'date', date, 'run', run, 'p', p);
+
+        save(fullfile(spcpaths.fp_out, spcpaths.peek), '-struct', 'savestruct', '-v7.3');
+        disp('Saved');
+
+        hwaitmsg.String = '';
+        src.String = 'Data saved';
+    end
+
     function quit(~, ~)
         close(hfig);
     end
