@@ -95,6 +95,7 @@ switch p.datatype
         I = fread(fp, header.data_block_length, 'uint8'); 
 end
 
+fclose(fp);
 %% Rearrange
 % Get in shape
 I2 = reshape(I, [p.tbins, p.framesize(1), p.framesize(2)]);
