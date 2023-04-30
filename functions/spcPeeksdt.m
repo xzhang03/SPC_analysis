@@ -14,6 +14,7 @@ addOptional(p, 'autoc', false); % Automate cdigit - experimental
 addOptional(p, 'frommat', true); % Loda from mat if exists
 
 % Compress
+addOptional(p, 'autosave', false);
 addOptional(p, 'compress', true); % First time it will make compression file, later reading it
 
 % Time domain: tm and iem
@@ -115,6 +116,9 @@ else
 end
 
 if ~donew
+    % Save changeable variables
+    makeplot = p.makeplot;
+    
     mov4d = spcDecompress(savestruct.mov_compressed);
     tm3d = savestruct.tm3d;
     tres = savestruct.tres;
@@ -124,6 +128,12 @@ if ~donew
     date = savestruct.date;
     run = savestruct.run;
     p = savestruct.p;
+    
+    % Load changeable variables
+    p.makeplot = makeplot;
+    
+    % Not autosave if loaded
+    p.autosave = false;
 end
 
 %% Load
@@ -168,6 +178,8 @@ if donew
                 p.crop(4) = min(p.crop(2) + p.crop(4), size(mov,1));
                 p.crop(2) = max(p.crop(2),1);
                 close(gcf)
+                
+                disp(p.crop);
             end
         end
         mov = mov(p.crop(2):p.crop(4), p.crop(1):p.crop(3), :);
@@ -221,7 +233,16 @@ end
 % RGB fov
 rgbfov = makergbfov(fov, failmask);
 
+%% Autosave (batching)
+if p.autosave
+    savedata();
+end
+
 %% Plot
+if ~p.makeplot
+    return;
+end
+
 % Panels
 npanels = 8;
 hfig = figure('Position', p.pos);
