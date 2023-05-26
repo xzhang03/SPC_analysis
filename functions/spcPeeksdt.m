@@ -136,6 +136,17 @@ if ~donew
     p.autosave = false;
 end
 
+%% Catch errors
+if isempty(spcpaths.cinds)
+    fprintf('Found no sdt files in %s\n', spcpaths.fp);
+    if exist(spcpaths.fp, 'dir')
+        fprintf('Path exists.\n');
+    else
+        fprintf('Path does not exists.\n');
+    end
+    return;
+end
+
 %% Load
 if donew
     hwait = waitbar(0);
