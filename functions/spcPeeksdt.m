@@ -33,7 +33,7 @@ addOptional(p, 'bint', 1);
 
 % Default thresholding
 addOptional(p, 'thresh', [0 9000]); % Default tm thresh
-addOptional(p, 'phthresh', [0 60]);  % Default photonthresh
+addOptional(p, 'phthresh', [0 1000]);  % Default photonthresh
 
 % IRF
 addOptional(p, 'deconvforiem', false); % If set true it takes 10x as long
@@ -105,9 +105,16 @@ end
 %% Initialize
 if p.frommat
     if exist(fullfile(spcpaths.fp_out, spcpaths.peek), 'file')
+        % If not making plots stop here
+        if ~p.makeplot
+            fprintf('Not making new structs or new plots. Stopping here.\n');
+            return;
+        end
+        
         savestruct = load(fullfile(spcpaths.fp_out, spcpaths.peek));
         fprintf('Loaded from previous mat.\n');
         donew = false;
+        
     else
         donew = true;
     end
@@ -287,7 +294,7 @@ if p.smoothwin > 0
 else
     htm = plot(tmtrace);
 end
-title(sprintf('Tm'));
+title(sprintf('Tm: %0.0f', mean(tmtrace)));
 
 % IEM
 subplot(1,npanels,7)
@@ -296,7 +303,7 @@ if p.smoothwin > 0
 else
    hiem = plot(iemtrace);
 end
-title(sprintf('IEM'));
+title(sprintf('IEM: %0.0f', mean(iemtrace)));
 
 % Decay
 subplot(1,npanels,8)
