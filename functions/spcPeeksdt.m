@@ -10,7 +10,7 @@ addOptional(p, 'server', 'nasquatch');
 addOptional(p, 'user', ''); % user name for path
 addOptional(p, 'slice', false); % Flag if data is slice
 addOptional(p, 'cdigit', 1); % Digits used for the "c" components in the file names (1, 2, or 3)
-addOptional(p, 'autoc', false); % Automate cdigit - experimental
+addOptional(p, 'autoc', true); % Automate cdigit - experimental
 addOptional(p, 'frommat', true); % Loda from mat if exists
 
 % Compress
@@ -25,6 +25,8 @@ addOptional(p, 'T2', 240); % data after this is not considered for tm and iem
 
 % Cropping
 addOptional(p, 'usecrop', true);
+addOptional(p, 'autocrop', false);
+addOptional(p, 'showautocrop', true); % Show autocrop if using it
 addOptional(p, 'crop', []);
 
 % Binning (sacrificing spatial resolution and noise separability)
@@ -188,16 +190,27 @@ if donew
         % Cropping
         if p.usecrop && ind == 1
             if isempty(p.crop)
-                figure
-                imshow(sum(mov,3),[]);
-                p.crop = round(wait(imrect()));
-                p.crop(3) = min(p.crop(1) + p.crop(3), size(mov,2));
-                p.crop(1) = max(p.crop(1),1);
-                p.crop(4) = min(p.crop(2) + p.crop(4), size(mov,1));
-                p.crop(2) = max(p.crop(2),1);
-                close(gcf)
-                
-                disp(p.crop);
+                if p.autocrop
+                    p.crop = spcAutocrop(sum(mov,3));
+                    if p.showautocrop
+                        figure
+                        imshow(sum(mov,3),[]);
+                        title(sprintf('%s %s run%i Autocrop', mouse, date, run))
+                        rectangle('Position', [p.crop(1) p.crop(2) p.crop(3)-p.crop(1) p.crop(4)-p.crop(2)],...
+                            'EdgeColor','g', 'LineWidth',2);
+                    end
+                else
+                    figure
+                    imshow(sum(mov,3),[]);
+                    p.crop = round(wait(imrect()));
+                    p.crop(3) = min(p.crop(1) + p.crop(3), size(mov,2));
+                    p.crop(1) = max(p.crop(1),1);
+                    p.crop(4) = min(p.crop(2) + p.crop(4), size(mov,1));
+                    p.crop(2) = max(p.crop(2),1);
+                    close(gcf)
+
+                    disp(p.crop);
+                end
             end
         end
         mov = mov(p.crop(2):p.crop(4), p.crop(1):p.crop(3), :);
