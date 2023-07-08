@@ -7,6 +7,7 @@ end
 
 p = inputParser;
 addOptional(p, 'size', 3);
+addOptional(p, 'threshold', 1);
 addOptional(p, 'buffer', [10 10 10 10]); %[col_start, row_start, col_end, row_end]
 
 % Unpack if needed
@@ -22,7 +23,7 @@ p = p.Results;
 imsize = size(im);
 
 % Threshold
-imthresh = imclose(im,strel('disk',p.size)) > 0;
+imthresh = imclose(im,strel('disk',p.size)) >= p.threshold;
 
 % Label and area
 imlabel = bwlabel(imthresh, 4);

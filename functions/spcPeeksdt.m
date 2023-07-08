@@ -26,6 +26,8 @@ addOptional(p, 'T2', 240); % data after this is not considered for tm and iem
 % Cropping
 addOptional(p, 'usecrop', true);
 addOptional(p, 'autocrop', false);
+addOptional(p, 'autocrop_size', 3);
+addOptional(p, 'autocrop_threshold', 1);
 addOptional(p, 'showautocrop', true); % Show autocrop if using it
 addOptional(p, 'crop', []);
 
@@ -191,7 +193,7 @@ if donew
         if p.usecrop && ind == 1
             if isempty(p.crop)
                 if p.autocrop
-                    p.crop = spcAutocrop(sum(mov,3));
+                    p.crop = spcAutocrop(sum(mov,3), 'size', p.autocrop_size, 'threshold', p.autocrop_threshold);
                     if p.showautocrop
                         figure
                         imshow(sum(mov,3),[]);
