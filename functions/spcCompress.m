@@ -62,8 +62,8 @@ for ttind = 1 : sz_in(4)
         end
 
         % Load up non-zero pixels
-        smstruct(ind).r = r;
-        smstruct(ind).c = c;
+        smstruct(ind).r = uint16(r);
+        smstruct(ind).c = uint16(c);
         smstruct(ind).v = v;
         smstruct(ind).size = [sz_in(1), sz_in(2), sz_in(3), sz_in(4), l];
     end

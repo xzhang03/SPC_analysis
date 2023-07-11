@@ -79,7 +79,7 @@ for i = 1 : fmax
         v = smc_temp(tind).v;
 
         for pind = 1 : length(r)
-            f(r(pind), c(pind)) =  f(r(pind), c(pind)) + v(pind);
+            f(r(pind), c(pind)) =  f(r(pind), c(pind)) + uint16(v(pind));
         end
     end
 

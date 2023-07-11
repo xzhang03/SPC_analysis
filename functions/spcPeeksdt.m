@@ -233,7 +233,7 @@ if donew
             % Initialize data
             fprintf('Intializing... ');
             tic;
-            mov4d = uint8(zeros(sz(1), sz(2), length(ivec), length(spcpaths.cinds)));
+            mov4d = uint16(zeros(sz(1), sz(2), length(ivec), length(spcpaths.cinds)));
             d = whos('mov4d');
             t = toc;
             fprintf('%0.2f GB in RAM in %0.2f s.\n', d.bytes / 1e9, t);
