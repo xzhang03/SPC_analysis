@@ -1,5 +1,6 @@
 */__pycache__
 *.asv
+*.mexw64
 */py/.*
 */py/__pycache__
 DistortionCorrection/utils/sbx2tiff_SZ.m
