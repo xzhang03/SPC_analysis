@@ -1,6 +1,7 @@
 function [mov, params] = spcLoadsdt_bf(fpath, rowinc, movdim)
 % Load sdt file and align pixels. This version uses bioformats. It has been
-% modified to work with FLIP data.
+% modified to work with FLIP data. Using spcLoadsdt to load FLIM data
+% instead
 % [mov, params] = spcLoadsdt(fpath, rowinc, movdim)
 
 if nargin < 3
