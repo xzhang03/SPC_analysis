@@ -1,5 +1,6 @@
 function [mov, params] = spcLoadsdt_bf(fpath, rowinc, movdim)
-% Load sdt file and align pixels. This version uses bioformats
+% Load sdt file and align pixels. This version uses bioformats. It has been
+% modified to work with FLIP data.
 % [mov, params] = spcLoadsdt(fpath, rowinc, movdim)
 
 if nargin < 3
@@ -17,6 +18,15 @@ params = result{2};
 l = size(result{1},1);
 sz = size(result{1}{1,1});
 np = sz(1) * sz(2);
+
+%% Flip exception
+if np == 1
+    % Show that flip is detected
+    disp('FLIP data detected');
+    mov = result{1};
+    mov = cell2mat(mov(:,1));
+    return;
+end
 
 %% Align
 % Find indices
