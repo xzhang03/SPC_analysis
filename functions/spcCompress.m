@@ -7,7 +7,7 @@ if nargin < 2
 end
 
 p = inputParser;
-addOptional(p, 'temp', true);
+addOptional(p, 'deep', true); % Deep compression means that a vector of Xs will be written as a single X.
 
 % Unpack if needed
 if iscell(varargin) && size(varargin,1) * size(varargin,2) == 1
@@ -20,11 +20,16 @@ p = p.Results;
 %% Initialize
 sz_in = size(mov);
 
-% 3d (single time piont) or 4d (multiple time points)
+% 2d (unused) or 3d (single time piont) or 4d (multiple time points)
+do2d = length(sz_in) == 2;
 do3d = length(sz_in) == 3;
 do4d = length(sz_in) == 4;
 
-if do3d
+if do2d
+    smstruct = struct('ind', uint16(0), 'r', uint16(0), 'c', uint16(0), 'v', uint16(0), 'size', []);
+    sz_in(3) = 1;
+    sz_in(4) = 1;
+elseif do3d
     smstruct = struct('ind', uint16(0), 'r', uint16(0), 'c', uint16(0), 'v', uint16(0), 'size', []);
     smstruct = repmat(smstruct, [sz_in(3), 1]);
     sz_in(4) = 1;
@@ -60,12 +65,17 @@ for ttind = 1 : sz_in(4)
             smstruct(ind).size = [sz_in(1), sz_in(2), sz_in(3), sz_in(4), 0];
             continue;
         end
+        
+        % Deep Compress v
+        if p.deep
+            v = sparse(double(v - 1));
+        end
 
         % Load up non-zero pixels
         smstruct(ind).r = uint16(r);
         smstruct(ind).c = uint16(c);
         smstruct(ind).v = v;
-        smstruct(ind).size = [sz_in(1), sz_in(2), sz_in(3), sz_in(4), l];
+        smstruct(ind).size = uint16([sz_in(1), sz_in(2), sz_in(3), sz_in(4), l]);
     end
 end
 

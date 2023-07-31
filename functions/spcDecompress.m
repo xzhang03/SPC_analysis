@@ -56,7 +56,11 @@ for ind = 1 : length(smstruct)
     % Load up
     c = smstruct(ind).c;
     v = smstruct(ind).v;
-
+    if issparse(v)
+        v = uint16(full(v));
+    end
+    
+    
     % Check uint8
     if strcmp(p.type, 'uint8')
         if any(v > 255) 
