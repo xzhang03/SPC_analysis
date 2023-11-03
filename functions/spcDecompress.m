@@ -57,7 +57,7 @@ for ind = 1 : length(smstruct)
     c = smstruct(ind).c;
     v = smstruct(ind).v;
     if issparse(v)
-        v = uint16(full(v));
+        v = uint16(full(v))+1;
     end
     
     

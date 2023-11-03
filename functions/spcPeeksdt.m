@@ -129,8 +129,11 @@ end
 if ~donew
     % Save changeable variables
     makeplot = p.makeplot;
-    
+    fprintf('Decompressing... ');
+    tic;
     mov4d = spcDecompress(savestruct.mov_compressed);
+    t = toc;
+    fprintf('Done. %0.2f s\n', t);
     tm3d = savestruct.tm3d;
     tres = savestruct.tres;
     ivec = savestruct.ivec;
@@ -456,6 +459,9 @@ uicontrol(hpan,'Style','pushbutton','Position', vp5 - [0 80 0 0], 'String',...
     
     % Apply threshold
     function [mov4d, tm3d, failmask] = applytmthresh(mov4d, tm3d, tmthresh, phthresh)
+        fprintf('Thresholding... ');
+        tic;
+        
         % Get what passes
         tm3dfail1 = (tm3d < tmthresh(1)) | (tm3d > tmthresh(2));
         fovhere = sum(sum(mov4d,3), 4);
@@ -470,10 +476,16 @@ uicontrol(hpan,'Style','pushbutton','Position', vp5 - [0 80 0 0], 'String',...
         tm3d(tm3dfail) = nan;
         mov4d(mov4dfail) = 0;
         failmask = mean(tm3dfail, 3);
+        
+        t = toc;
+        fprintf('Done. %0.2f s\n', t);
     end
 
     % Main calculation
     function [fov,tmfov, photontrace, tmtrace, iemtrace, decay] = datacal(mov4, tm3d, irf, tvec, tres)
+        fprintf('Calculating... ');
+        tic;
+        
         % Get fov
         fov = sum(sum(mov4,3), 4);
 
@@ -502,6 +514,8 @@ uicontrol(hpan,'Style','pushbutton','Position', vp5 - [0 80 0 0], 'String',...
             iemtrace(i) = sum(tracedc) / max(tracedc) * tres;
         end
         
+        t = toc;
+        fprintf('Done. %0.2f s\n', t);
     end
 
     % make RGB fov

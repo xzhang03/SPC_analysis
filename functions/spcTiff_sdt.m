@@ -67,7 +67,8 @@ if isempty(p.user)
             p.user = 'hakan';
         case 'YL'
             p.user = 'yoav';
-            
+        case 'MP'
+            p.user = 'marta';
     end
 end
 
@@ -187,6 +188,7 @@ for ind = spcpaths.cinds
     if usesmc
         % Load sparse matrix compression file
         smc = load(fullfile(spcpaths.fp, sprintf(spcpaths.smc,ind)), "-mat");
+        smc = smc.smc;
         mov = spcDecompress(smc);
     else
         mov = spcLoadsdt(fullfile(spcpaths.fp, sprintf(spcpaths.sdt_in,ind)), 'crop', p.resizedim);
@@ -198,7 +200,7 @@ for ind = spcpaths.cinds
         end
     end
     t = toc;
-    fprintf('Loaded Frame %i in %0.2f s.\n', ind, t);
+    fprintf('Loaded Frame %i in %0.2f s.', ind, t);
     
     % Crop
     if ind == 1 && isempty(p.crop)
@@ -262,7 +264,8 @@ for ind = spcpaths.cinds
             end
         end
     end
-    
+    t = toc;
+    fprintf(' Processing %0.2f s.\n', t);
     
     % Repmat
     if ind == 1

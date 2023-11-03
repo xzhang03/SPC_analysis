@@ -25,6 +25,8 @@ addOptional(p, 'user', 'stephen'); % user name for path
 addOptional(p, 'allowupdate', true);
 addOptional(p, 'zippath', 'C:\Program Files\7-Zip\7z.exe'); % 7Zip path
 addOptional(p, 'targetpath', 'D:\User Folders\Stephen\Deep_backup\2p'); % Target path
+addOptional(p, 'trackerpath', 'D:\User Folders\Stephen\Deep_backup\2p\Backup_tracker.mat');
+addOptional(p, 'hidedone', true);
 
 % Unpack if needed
 if iscell(varargin) && size(varargin,1) * size(varargin,2) == 1
@@ -37,11 +39,14 @@ p = p.Results;
 %% Clean up inputs
 % No mice
 % Target dir
-if ~exist(fullfile(p.targetpath, 'Backup_tracker.mat'), 'file')
-    donelist = dir(fullfile(p.targetpath, '*.7z'));
-else
+if ~isempty(p.trackerpath)
+    donelist = load(p.trackerpath);
+    donelist = donelist.donelist;
+elseif exist(fullfile(p.targetpath, 'Backup_tracker.mat'), 'file')
     donelist = load(fullfile(p.targetpath, 'Backup_tracker.mat'));
     donelist = donelist.donelist;
+else
+    donelist = dir(fullfile(p.targetpath, '*.7z'));
 end
 if isempty(mice)
     mice = uigetmice();
@@ -127,7 +132,11 @@ for imice = 1 : nmice
     else
         donelist(end+1) = donelist_new; %#ok<AGROW>
     end
-    save(fullfile(p.targetpath, 'Backup_tracker.mat'), 'donelist', '-v7.3');
+    if ~isempty(p.trackerpath)
+        save(p.trackerpath, 'donelist', '-v7.3');
+    else
+        save(fullfile(p.targetpath, 'Backup_tracker.mat'), 'donelist', '-v7.3');
+    end
     
     % Parse message
     i1 = regexp(result, 'bytes (');
@@ -169,11 +178,29 @@ function mice = uigetmice()
     micelist2 = micelist;    
     for i = 1 : length(donelist)
         idone = strcmpi(micelist, donelist(i).name(1:end-3));
-        micelist2{idone} = sprintf('%s (done)', micelist{idone});
+        if p.hidedone
+            micelist2{idone} = [];
+        else
+            micelist2{idone} = sprintf('%s (done)', micelist{idone});
+        end
+    end
+    
+    % Remove empty
+    if p.hidedone
+        micelist2 = micelist2(~cellfun('isempty', micelist2));
     end
     
     % Choose
-    s = listdlg('ListString', micelist2, 'PromptString', 'Choose mice');
-    mice = micelist(s);
+    if p.hidedone
+        strtmp = 'Choose mice (Dones hidden)';
+    else
+        strtmp = 'Choose mice';
+    end
+    s = listdlg('ListString', micelist2, 'PromptString', strtmp);
+    if p.hidedone
+        mice = micelist2(s);
+    else
+        mice = micelist(s);
+    end
 end
 end
