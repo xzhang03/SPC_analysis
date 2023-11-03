@@ -87,7 +87,11 @@ for i = 1 : fmax
     % Grab temp
     smc_temp = smc(inds_curr);
     for tind = 1 : length(smc_temp)
-        vtotal(tind) = sum(smc_temp(tind).v);
+        v = smc_temp(tind).v;
+        if issparse(v)
+            v = uint16(full(v))+1;
+        end
+        vtotal(tind) = sum(v);
     end
     vtotals(:,i) = vtotal;
     

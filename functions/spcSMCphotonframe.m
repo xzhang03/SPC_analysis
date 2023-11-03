@@ -77,6 +77,9 @@ for i = 1 : fmax
         r = smc_temp(tind).r;
         c = smc_temp(tind).c;
         v = smc_temp(tind).v;
+        if issparse(v)
+            v = uint16(full(v))+1;
+        end
 
         for pind = 1 : length(r)
             f(r(pind), c(pind)) =  f(r(pind), c(pind)) + uint16(v(pind));
