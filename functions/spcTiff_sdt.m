@@ -211,7 +211,13 @@ for ind = spcpaths.cinds
         p.crop(1) = max(p.crop(1),1);
         p.crop(4) = min(p.crop(2) + p.crop(4), size(mov,1));
         p.crop(2) = max(p.crop(2),1);
+        disp(p.crop);
         close(gcf)
+    elseif ind == 1
+        figure
+        imshow(sum(mov,3),[]);
+        rectangle('Position', [p.crop(1) p.crop(2) p.crop(3)-p.crop(1) p.crop(4)-p.crop(2)],...
+            'EdgeColor','g', 'LineWidth',2)
     end
     mov = mov(p.crop(2):p.crop(4), p.crop(1):p.crop(3), :);
     sz = size(mov);
