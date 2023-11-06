@@ -31,7 +31,7 @@ spcpaths = spcPath(mouse, date, run, 'server', p.server, 'user', p.user,...
 %% Load
 hwait = waitbar(0);
 for ind = p.frames
-    waitbar(ind/p.frames, hwait, sprintf('Processing %s %s run%i: %i/%i', mouse, date, run, ind, p.frames));
+    waitbar(ind/length(p.frames), hwait, sprintf('Processing %s %i run%i: %i/%i', mouse, date, run, ind, length(p.frames)));
 
     % Load movie
     tic
@@ -56,7 +56,7 @@ for ind = p.frames
         end
     end
     t = toc;
-    fprintf('Loaded Frame %i in %0.2f s.', ind, t);
+    fprintf('Loaded Frame %i in %0.2f s.\n', ind, t);
 
     % Initialize
     if ind == 1
@@ -74,9 +74,6 @@ for ind = p.frames
 
     % Trim and save
     mov3d(:,:,ind) = uint16(sum(mov,3));
-
-    t = toc;
-    fprintf(' Processing %0.2f s.\n', t);
 
 end
 close(hwait)
