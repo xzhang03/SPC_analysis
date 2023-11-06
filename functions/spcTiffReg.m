@@ -22,6 +22,7 @@ addOptional(p, 'medfilt2size', [2 2]); % Neighbor area for 2D median filter
 % Registration variables
 addOptional(p, 'binxy', 1); % Binning
 addOptional(p, 'range', []); % Specify first and last frame numbers, leave empty to us all
+addOptional(p, 'usemeanref', false); % Use mean instead of median
 addOptional(p, 'externalreftarget', false); % External reference target (same size)
 addOptional(p, 'iterations', 1); % Repeated iterations
 
@@ -159,9 +160,17 @@ if dophotons || dotm
         im2reg = readtiff(fullfile(targetfp, targetfn));
         im2reg = binxy(im2reg, p.binxy);
     elseif isempty(p.range)
-        im2reg = median(im_photon_bin,3);
+        if p.usemeanref
+            im2reg = mean(im_photon_bin,3);
+        else
+            im2reg = median(im_photon_bin,3);
+        end
     else
-        im2reg = median(im_photon_bin(:,:,p.range(1):p.range(2)),3);
+        if p.usemeanref
+            im2reg = mean(im_photon_bin(:,:,p.range(1):p.range(2)),3);
+        else
+            im2reg = median(im_photon_bin(:,:,p.range(1):p.range(2)),3);
+        end
     end
     
     % Get a focus area for calculating shifts

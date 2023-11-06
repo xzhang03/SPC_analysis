@@ -15,11 +15,13 @@ addOptional(p, 'sourcetype', 'registered'); % Can be 'raw', 'reigstered', 'warpe
 addOptional(p, 'force', false); % Force overwrite or not
 
 % Spatial filter variables
+addOptional(p, 'usemean', false); % Use mean instead of median (better for low photon counts)
 addOptional(p, 'uselocalnorm', true);
 addOptional(p, 'hp_norm_sigmas', [8, 30], @isnumeric); % Sigma for gaussian fit
 addOptional(p, 'medfilt2size', [2 2]); % Neighbor area for 2D median filter
 
 % Show
+addOptional(p, 'saveraw', true); % Save a copy without the filtering in case that's better
 addOptional(p, 'showresult', true);
 
 % Unpack if needed
@@ -97,7 +99,18 @@ end
 %% Make image
 if dophotons
     % Reference
-    im = median(im_photon,3);
+    if p.usemean
+        im = mean(im_photon,3);
+    else
+        im = median(im_photon,3);
+    end
+    
+    % Save a unfiltered copy
+    if p.saveraw
+        % Write
+        writetiff(im, sprintf('%sraw.tif', fullfile(spcpaths.fp_out,spcpaths.cp_toseg(1:end-4))), 'double');
+    end
+    
     im(isnan(im)) = 0;
     
     % 2D Median filter
