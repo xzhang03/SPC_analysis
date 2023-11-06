@@ -220,7 +220,9 @@ if p.dotm || p.dophotons
     % Apply filters
     hwait = waitbar(0, 'Applying masks');
     for i = 1 : ncells
-        waitbar(i/ncells, hwait, sprintf('Applying masks %i/%i', i, ncells));
+        if mod(i,5) == 0
+            waitbar(i/ncells, hwait, sprintf('Applying masks %i/%i', i, ncells));
+        end
 
         % Current mask
         maskcurr = masks == i;

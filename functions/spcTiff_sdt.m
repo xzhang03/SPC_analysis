@@ -248,7 +248,7 @@ for ind = spcpaths.cinds
                 if any(trace > p.threshold)
                     curr_tm(r,c) = sum(trace .* tvec) / sum(trace);
                 else
-                    curr_tm(r,c) = nan;
+                    curr_tm(r,c) = 0;
                 end  
             end
             
@@ -265,7 +265,7 @@ for ind = spcpaths.cinds
                     end
                     curr_iem(r,c) = sum(trace) / max(trace) * tres;
                 else
-                    curr_iem(r,c) = nan;
+                    curr_iem(r,c) = 0;
                 end
             end
         end

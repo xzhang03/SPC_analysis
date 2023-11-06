@@ -80,6 +80,9 @@ if isempty(p.user)
     end
 end
 
+fovtrace = [];
+ROItrace = [];
+
 %% Time vectors
 % Time resolution
 tres = p.tcycle / p.tbins * p.bint;
@@ -190,7 +193,7 @@ if donew
             end
         end
         t = toc;
-        fprintf('Loaded Frame %i in %0.2f s.\n', ind, t);
+        fprintf('Loaded Frame %i in %0.2f s.', ind, t);
         
         % Cropping
         if p.usecrop && ind == 1
@@ -220,12 +223,15 @@ if donew
         end
         mov = mov(p.crop(2):p.crop(4), p.crop(1):p.crop(3), :);
         
+        tic
         % Binning
         if p.binxy > 1
             mov = binxy(mov, p.binxy);
+            mov = mov * p.binxy * p.binxy;
         end
         if p.bint > 1
             mov = bint(mov, p.bint);
+            mov = mov * p.bint;
         end
         
         % Get size
@@ -254,6 +260,9 @@ if donew
         % Calculate field-wide tm
         movtrim = double(movtrim);
         tm3d(:,:,ind) = sum(movtrim .* ttensor, 3) ./ sum(movtrim, 3);
+        
+        t = toc;
+        fprintf(' Processing %0.2f s.\n', t);
         
     end
     close(hwait)
@@ -449,6 +458,10 @@ uicontrol(hpan,'Style','pushbutton','Position', vp5 - [0 80 0 0], 'String',...
            plot([iemtrace_thresh_crop, iemtrace_crop]);
         end
         title(sprintf('IEM'));
+        
+        % ROI traces
+        ROItrace = struct('coords', coords, 'photontrace_thresh_crop', photontrace_thresh_crop,...
+            'tmtrace_thresh_crop', tmtrace_thresh_crop, 'iemtrace_thresh_crop', iemtrace_thresh_crop);
 
         % Decay
         subplot(1,npanels,8)
@@ -513,6 +526,9 @@ uicontrol(hpan,'Style','pushbutton','Position', vp5 - [0 80 0 0], 'String',...
             tracedc = deconvlucy(mov2d(:,i), irf);
             iemtrace(i) = sum(tracedc) / max(tracedc) * tres;
         end
+        
+        % trace struct
+        fovtrace = struct('photon', photontrace, 'tm', tmtrace, 'iem', iemtrace);
         
         t = toc;
         fprintf('Done. %0.2f s\n', t);
@@ -598,7 +614,7 @@ uicontrol(hpan,'Style','pushbutton','Position', vp5 - [0 80 0 0], 'String',...
 
         % Save struct
         savestruct = struct('mov_compressed', spcCompress(mov4d), 'tm3d', tm3d, 'tres', tres, 'ivec', ivec,...
-            'tvec', tvec, 'mouse', mouse, 'date', date, 'run', run, 'p', p);
+            'tvec', tvec, 'mouse', mouse, 'date', date, 'run', run, 'p', p, 'fovtrace', fovtrace, 'ROItrace', ROItrace);
 
         save(fullfile(spcpaths.fp_out, spcpaths.peek), '-struct', 'savestruct', '-v7.3');
         disp('Saved');
