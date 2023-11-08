@@ -146,7 +146,7 @@ spcpaths.signals = sprintf('%s_%s_%s%i_signals.mat', date, mouse, RunOrSlice, ..
     run);
 
 % CSV output files
-spcpaths.tm_csv = sprintf('%s_%s_%s%i_tm.csv', date, mouse, RunOrSlice, ...
+spcpaths.tm_csv = sprintf('%s_%s_%s%i_tau.csv', date, mouse, RunOrSlice, ...
     run);
 
 % Run ROI ref
@@ -167,13 +167,13 @@ if p.multifov
     spcpaths.ROI_ref = sprintf('%s_%s_ROIRefs_fov%i.tif', date, mouse, p.fov);
 
     % Csv tm output file
-    spcpaths.xruntm_csv = sprintf('%s_%s_tm_fov%i.csv', date, mouse, p.fov);
+    spcpaths.xruntm_csv = sprintf('%s_%s_tau_fov%i.csv', date, mouse, p.fov);
     
     % Ref image neuropil output file
     spcpaths.ROInp_ref = sprintf('%s_%s_npROIRefs_fov%i.tif', date, mouse, p.fov);
     
     % Csv tm neuropil output file
-    spcpaths.xruntmnp_csv = sprintf('%s_%s_nptm_fov%i.csv', date, mouse, p.fov);
+    spcpaths.xruntmnp_csv = sprintf('%s_%s_nptau_fov%i.csv', date, mouse, p.fov);
 else
     % Single fov
     % Mat cross expt output file
@@ -183,13 +183,13 @@ else
     spcpaths.ROI_ref = sprintf('%s_%s_ROIRefs.tif', date, mouse);
 
     % Csv tm output file
-    spcpaths.xruntm_csv = sprintf('%s_%s_tm.csv', date, mouse);
+    spcpaths.xruntm_csv = sprintf('%s_%s_tau.csv', date, mouse);
     
     % Ref image neuropil output file
     spcpaths.ROInp_ref = sprintf('%s_%s_npROIRefs.tif', date, mouse);
 
     % Csv tm neuropil output file
-    spcpaths.xruntmnp_csv = sprintf('%s_%s_nptm.csv', date, mouse);
+    spcpaths.xruntmnp_csv = sprintf('%s_%s_nptau.csv', date, mouse);
 end
 
 end

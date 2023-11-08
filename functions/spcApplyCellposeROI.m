@@ -22,6 +22,9 @@ addOptional(p, 'binxy', 1);
 % Tm
 addOptional(p, 'mintm', 1000); % Min tm
 
+% IEM
+addOptional(p, 'miniem', 300); % Min tm
+
 % Threshold
 addOptional(p, 'minarea', 20); % Min number of pixels for a cell (after binning)
 
@@ -32,6 +35,7 @@ addOptional(p, 'minnparea', 100); % Minimal number of pixels for neuropil
 % Pick datasets
 addOptional(p, 'dophotons', true); % Photon count
 addOptional(p, 'dotm', true); % Mean lifetime
+addOptional(p, 'doiem', true); % IEM lifetime
 addOptional(p, 'plotscatter', true); % Make a plot in the end on tm data
 
 % Frame info for dff and dt
@@ -94,15 +98,19 @@ switch p.sourcetype
     case 'raw'
         fp_photon = fullfile(spcpaths.fp_out, spcpaths.tif_photons);
         fp_tm = fullfile(spcpaths.fp_out, spcpaths.tif_tm);
+        fp_iem = fullfile(spcpaths.fp_out, spcpaths.tif_iem);
     case 'registered'
         fp_photon = fullfile(spcpaths.fp_out, spcpaths.regtif_photons);
         fp_tm = fullfile(spcpaths.fp_out, spcpaths.regtif_tm);
+        fp_iem = fullfile(spcpaths.fp_out, spcpaths.regtif_iem);
     case 'warped'
         fp_photon = fullfile(spcpaths.fp_out, spcpaths.warptif_photons);
         fp_tm = fullfile(spcpaths.fp_out, spcpaths.warptif_tm);
+        fp_iem = fullfile(spcpaths.fp_out, spcpaths.warptif_iem);
     case 'demonsreg'
         fp_photon = fullfile(spcpaths.fp_out, spcpaths.demregtif_photons);
         fp_tm = fullfile(spcpaths.fp_out, spcpaths.demregtif_tm);
+        fp_iem = fullfile(spcpaths.fp_out, spcpaths.demregtif_iem);
 end
 
 
@@ -165,7 +173,7 @@ end
 trace_ini = struct('raw', [], 'neuropil', [], 'subtracted', [], 'raw_delta', [],...
     'neuropil_delta', [], 'subtracted_delta', []); % Delta is dff or dt
 cellsort_spc = struct('id', [], 'mask', [], 'area', [], 'neuropil', [], 'neuropilarea', [], 'group_number', [],...
-    'photon_trace', trace_ini, 'tm_trace', trace_ini, 'tm_start',[]);
+    'photon_trace', trace_ini, 'tm_trace', trace_ini, 'tm_start',[], 'iem_trace', trace_ini, 'iem_start',[]);
 cellsort_spc = repmat(cellsort_spc, [ncells, 1]);
 
 %% Photons and Tm
@@ -177,8 +185,24 @@ end
 
 % Load tm data
 if p.dotm
-    % Load warped
-    [im_tm, ~] = readtiff(fp_tm);   
+    if exist(fp_tm, 'file')
+        % Load warped
+        [im_tm, ~] = readtiff(fp_tm);   
+    else
+        disp('No Tm source file. Skip.');
+        p.dotm = false;
+    end
+end
+
+% Load IEM data
+if p.doiem
+    if exist(fp_iem, 'file')
+        % Load warped
+        [im_iem, ~] = readtiff(fp_iem);   
+    else
+        disp('No IEM source file. Skip.');
+        p.doiem = false;
+    end
 end
 
 % Get the number of sections
@@ -200,11 +224,22 @@ end
 if p.dotm && p.binxy > 1
     im_tm = binxy(im_tm, p.binxy);
 end
+if p.doiem && p.binxy > 1
+    im_iem = binxy(im_iem, p.binxy);
+end
 
-% Get rid of bad pixels (tm way too low)
-goodpixels = im_tm >= p.mintm;
-% goodpixels = mean(goodpixels,3);
-im_tm(~goodpixels) = nan;
+if p.dotm
+    % Get rid of bad pixels (tm way too low)
+    goodpixels_tm = im_tm >= p.mintm;
+    % goodpixels = mean(goodpixels,3);
+    im_tm(~goodpixels_tm) = nan;
+end
+if p.doiem
+    % Get rid of bad pixels (tm way too low)
+    goodpixels_iem = im_iem >= p.miniem;
+    % goodpixels = mean(goodpixels,3);
+    im_iem(~goodpixels_iem) = nan;
+end
 
 % Neuropil elements
 npelbig = strel('disk', p.npsize(1));
@@ -316,18 +351,19 @@ if p.dotm || p.dophotons
                     photon_subtracted_trace / mean(photon_subtracted_trace(p.StartFrame : p.StartFrame+p.StartFrameN)) - 1;
                 cellsort_spc(irealcell).photon_trace.subtracted_delta = dff_subtracted_trace;
             end
+            
             if p.dotm
                 % raw tm trace
                 tm_trace =...
                     squeeze(nansum(nansum(im_tm .* mask_stack, 1), 2));
-                tm_trace_area = squeeze(nansum(nansum(goodpixels .* mask_stack, 1), 2));
+                tm_trace_area = squeeze(nansum(nansum(goodpixels_tm .* mask_stack, 1), 2));
                 tm_trace = tm_trace ./ tm_trace_area;
                 cellsort_spc(irealcell).tm_trace.raw = tm_trace;
                 
                 % np tm trace
                 tm_np_trace = ...
                     squeeze(nansum(nansum(im_tm .* np_stack, 1), 2));
-                tm_np_trace_area = squeeze(nansum(nansum(goodpixels .* np_stack, 1), 2));
+                tm_np_trace_area = squeeze(nansum(nansum(goodpixels_tm .* np_stack, 1), 2));
                 tm_np_trace = tm_np_trace ./ tm_np_trace_area;
                 cellsort_spc(irealcell).tm_trace.neuropil = tm_np_trace;
                 
@@ -353,6 +389,44 @@ if p.dotm || p.dophotons
                 % Tm start
                 cellsort_spc(irealcell).tm_start = mean(tm_trace(p.StartFrame : p.StartFrame+p.StartFrameN-1));
             end
+            
+            if p.doiem
+                % raw iem trace
+                iem_trace =...
+                    squeeze(nansum(nansum(im_iem .* mask_stack, 1), 2));
+                iem_trace_area = squeeze(nansum(nansum(goodpixels_iem .* mask_stack, 1), 2));
+                iem_trace = iem_trace ./ iem_trace_area;
+                cellsort_spc(irealcell).iem_trace.raw = iem_trace;
+                
+                % np iem trace
+                iem_np_trace = ...
+                    squeeze(nansum(nansum(im_iem .* np_stack, 1), 2));
+                iem_np_trace_area = squeeze(nansum(nansum(goodpixels_iem .* np_stack, 1), 2));
+                iem_np_trace = iem_np_trace ./ iem_np_trace_area;
+                cellsort_spc(irealcell).iem_trace.neuropil = iem_np_trace;
+                
+                % subtracted iem trace
+                iem_subtracted_trace = iem_trace - iem_np_trace;
+                cellsort_spc(irealcell).iem_trace.subtracted = iem_subtracted_trace;
+
+                % dt iem trace
+                dt_trace =...
+                    iem_trace - mean(iem_trace(p.StartFrame : p.StartFrame+p.StartFrameN-1));
+                cellsort_spc(irealcell).iem_trace.raw_delta = dt_trace;
+                
+                % dt iem np trace
+                dt_np_trace =...
+                    iem_np_trace - mean(iem_np_trace(p.StartFrame : p.StartFrame+p.StartFrameN-1));
+                cellsort_spc(irealcell).iem_trace.neuropil_delta = dt_np_trace;
+                
+                % dt iem subtracted trace
+                dt_subtracted_trace =...
+                    iem_subtracted_trace - mean(iem_subtracted_trace(p.StartFrame : p.StartFrame+p.StartFrameN-1));
+                cellsort_spc(irealcell).iem_trace.subtracted_delta = dt_subtracted_trace;
+                
+                % IEM start
+                cellsort_spc(irealcell).iem_start = mean(iem_trace(p.StartFrame : p.StartFrame+p.StartFrameN-1));
+            end
         end
     end
     close(hwait)
@@ -366,7 +440,12 @@ cellsort_spc = cellsort_spc(1:nrealcell);
 if p.plotscatter
     % Initialize
     photonsvec = nan(nrealcell,1);
-    tmvec = nan(nrealcell,1);
+    if p.dotm
+        tmvec = nan(nrealcell,1);
+    end
+    if p.doiem
+        iemvec = nan(nrealcell,1);
+    end
     
     for i = 1 : nrealcell
         % Load
@@ -374,13 +453,29 @@ if p.plotscatter
             mean(cellsort_spc(i).photon_trace.subtracted_delta(p.EndFrame:p.EndFrame+p.EndFrameN-1))...
             - mean(cellsort_spc(i).photon_trace.subtracted_delta(p.StartFrame:p.StartFrame+p.StartFrameN-1));
         
-        tmvec(i) =...
-            mean(cellsort_spc(i).tm_trace.subtracted_delta(p.EndFrame:p.EndFrame+p.EndFrameN-1))...
-            - mean(cellsort_spc(i).tm_trace.subtracted_delta(p.StartFrame:p.StartFrame+p.StartFrameN-1));
+        if p.dotm
+            tmvec(i) =...
+                mean(cellsort_spc(i).tm_trace.subtracted_delta(p.EndFrame:p.EndFrame+p.EndFrameN-1))...
+                - mean(cellsort_spc(i).tm_trace.subtracted_delta(p.StartFrame:p.StartFrame+p.StartFrameN-1));
+        end
+        
+        if p.doiem
+            iemvec(i) =...
+                mean(cellsort_spc(i).iem_trace.subtracted_delta(p.EndFrame:p.EndFrame+p.EndFrameN-1))...
+                - mean(cellsort_spc(i).iem_trace.subtracted_delta(p.StartFrame:p.StartFrame+p.StartFrameN-1));
+        end
     end
 
-    figure
-    scatter(photonsvec, tmvec);
+    if p.dotm
+        figure
+        scatter(photonsvec, tmvec);
+        title('Tm vs photons')
+    end
+    if p.doiem
+        figure
+        scatter(photonsvec, iemvec);
+        title('IEM vs photons')
+    end
 end
 
 %% Save to file
@@ -435,12 +530,22 @@ end
 
 if p.savetmcsv
     % Iinitialize
-    tmmat = nan(nrealcell,3);
+    tmmat = nan(nrealcell,5);
     
     for i = 1 : nrealcell
-        % Load
-        tmmat(i,3) = mean(cellsort_spc(i).tm_trace.subtracted_delta(p.EndFrame:p.EndFrame+p.EndFrameN-1));
-        tmmat(i,2) = mean(cellsort_spc(i).tm_trace.subtracted_delta(p.StartFrame:p.StartFrame+p.StartFrameN-1));
+        % Tm
+        if p.dotm
+            % Load
+            tmmat(i,3) = mean(cellsort_spc(i).tm_trace.subtracted_delta(p.EndFrame:p.EndFrame+p.EndFrameN-1));
+            tmmat(i,2) = mean(cellsort_spc(i).tm_trace.subtracted_delta(p.StartFrame:p.StartFrame+p.StartFrameN-1));
+        end
+        
+        % IEM
+        if p.doiem
+            % Load
+            tmmat(i,5) = mean(cellsort_spc(i).iem_trace.subtracted_delta(p.EndFrame:p.EndFrame+p.EndFrameN-1));
+            tmmat(i,4) = mean(cellsort_spc(i).iem_trace.subtracted_delta(p.StartFrame:p.StartFrame+p.StartFrameN-1));
+        end
         
         % Group
         tmmat(i,1) = cellsort_spc(i).group_number;
