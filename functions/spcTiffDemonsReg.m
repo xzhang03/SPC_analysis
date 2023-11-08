@@ -99,25 +99,64 @@ else
     dotm = true;
 end
 
+% Redo tm or not
+if exist(fullfile(spcpaths.fp_out,spcpaths.demregtif_iem), 'file')
+    % File already exists
+    if p.force
+        % Force redo
+        doiem = true;
+    elseif input('IEM reg tiff file already exists, redo? (1 = yes, 0 = no): ') == 1
+        % Ask redo
+        doiem = true;
+    else
+        % No redo
+        doiem = false;
+    end
+else
+    % No file
+    doiem = true;
+end
+
 %% Load
-if dophotons || dotm
+if dophotons || dotm || doiem
     % Switch types
     switch p.sourcetype
         case 'raw'
             fp_photon = fullfile(spcpaths.fp_out, spcpaths.tif_photons);
             fp_tm = fullfile(spcpaths.fp_out, spcpaths.tif_tm);
+            fp_iem = fullfile(spcpaths.fp_out, spcpaths.tif_iem);
         case 'registered'
             fp_photon = fullfile(spcpaths.fp_out, spcpaths.regtif_photons);
             fp_tm = fullfile(spcpaths.fp_out, spcpaths.regtif_tm);
+            fp_iem = fullfile(spcpaths.fp_out, spcpaths.regtif_iem);
         case 'warped'
             fp_photon = fullfile(spcpaths.fp_out, spcpaths.warptif_photons);
             fp_tm = fullfile(spcpaths.fp_out, spcpaths.warptif_tm);
+            fp_iem = fullfile(spcpaths.fp_out, spcpaths.warptif_iem);
     end
     
     % Read
-    im_photon = readtiff(fp_photon);
+    if exist(fp_photon, 'file')
+        im_photon = readtiff(fp_photon);
+    else
+        disp('No photon tiff file. Check source type.');
+        return;
+    end
     if dotm
-        im_tm = readtiff(fp_tm);
+        if exist(fp_tm, 'file')
+            im_tm = readtiff(fp_tm);
+        else
+            disp('No Tm input tiff file. Skip.');
+            dotm = false;
+        end
+    end
+    if doiem
+        if exist(fp_iem, 'file')
+            im_iem = readtiff(fp_iem);
+        else
+            disp('No IEM input tiff file. Skip.');
+            dotm = false;
+        end
     end
 end
 
@@ -154,15 +193,23 @@ for iter = 1 : p.iterations
     if dophotons || dotm
         fprintf('Initializing arrays...')
         tic;
+        
+        if iter == 1 % Initialize first iteration only
+            % Get the meshgrid
+            [xx, yy] = meshgrid(1 : size(im_photon, 2), 1 : size(im_photon, 1));
 
-        % Get the meshgrid
-        [xx, yy] = meshgrid(1 : size(im_photon, 2), 1 : size(im_photon, 1));
+            % Initialize registered data (using the grid file xx to get size)
+            photon_reg = zeros(size(xx));
+            photon_reg = repmat(photon_reg, [1, 1, size(im_photon,3)]);
 
-        % Initialize registered data (using the grid file xx to get size)
-        photon_reg = zeros(size(xx));
-        photon_reg = repmat(photon_reg, [1, 1, size(im_photon,3)]);
-        tm_reg = photon_reg;
-
+            if dotm
+                tm_reg = photon_reg;
+            end
+            if doiem
+                iem_reg = photon_reg;
+            end
+        end
+        
         % Apply median filter to reference
         ref = medfilt2(ref, p.medfilt2size, 'symmetric');
 
@@ -261,6 +308,12 @@ for iter = 1 : p.iterations
                     interp2(xx, yy, im_tm(:,:,i),...
                     xx + D_combined(:,:,2*i-1), yy + D_combined(:,:,2*i));
             end
+            
+            if doiem
+                iem_reg(:,:,i) = ...
+                    interp2(xx, yy, im_iem(:,:,i),...
+                    xx + D_combined(:,:,2*i-1), yy + D_combined(:,:,2*i));
+            end
         end
         t = toc;
         fprintf(' Done. Elapsed time: %i seconds.\n', round(t));
@@ -269,7 +322,13 @@ for iter = 1 : p.iterations
     %% Prep for next iteration
     if iter < p.iterations
         im_photon = photon_reg;
-        im_tm = tm_reg;
+        
+        if dotm
+            im_tm = tm_reg;
+        end
+        if doiem
+            im_iem = iem_reg;
+        end
     end
 end
 
@@ -285,6 +344,12 @@ end
 if dotm
     % Write
     writetiff(tm_reg, fullfile(spcpaths.fp_out,spcpaths.demregtif_tm), 'double');
+end
+
+% Apply shifts to iem data
+if doiem
+    % Write
+    writetiff(iem_reg, fullfile(spcpaths.fp_out,spcpaths.demregtif_iem), 'double');
 end
 fprintf(' Done. \n');
    

@@ -11,7 +11,6 @@ addOptional(p, 'slice', false); % Flag if data is slice
 addOptional(p, 'cdigit', 1); % Digits used for the "c" components in the file names (1, 2, or 3)
 
 % File variables
-addOptional(p, 'autogentiff', true); % If the original tiffs were not made, make them
 addOptional(p, 'force', false); % Force overwrite or not
 
 % Spatial filter variables
@@ -98,45 +97,46 @@ else
     dotm = true;
 end
 
+% Redo iem or not
+if exist(fullfile(spcpaths.fp_out,spcpaths.regtif_iem), 'file')
+    % File already exists
+    if p.force
+        % Force redo
+        doiem = true;
+    elseif input('IEM reg tiff file already exists, redo? (1 = yes, 0 = no): ') == 1
+        % Ask redo
+        doiem = true;
+    else
+        % No redo
+        doiem = false;
+    end
+else
+    % No file
+    doiem = true;
+end
+
 % Make sure that the base photon tiff file is still around
 if dophotons
     if ~exist(fullfile(spcpaths.fp_out,spcpaths.tif_photons), 'file')
-        if p.autogentiff
-            redotiffphotons = true;
-        elseif input('No photon tiff file, make it? (1 = yes, 0 = no): ') == 1
-            redotiffphotons = true;
-        else
-            redotiffphotons = false;
-        end
-    else
-        redotiffphotons = false;
+        disp('No photon tiff file.')
+        return;
     end
-else
-    redotiffphotons = false;
 end
 
 % Make sure that the base tm tiff file is still around
 if dotm
     if ~exist(fullfile(spcpaths.fp_out,spcpaths.tif_tm), 'file')
-        if p.autogentiff
-            redotifftm = true;
-        elseif input('No tm tiff file, make it? (1 = yes, 0 = no): ') == 1
-            redotifftm = true;
-        else
-            redotifftm = false;
-        end
-    else
-        redotifftm = false;
+        disp('No Tm tiff file.')
+        dotm = false;
     end
-
-else
-    redotifftm = false;
 end
 
-% Remake the base photonsa nd tm tiff files if needed
-if redotiffphotons || redotifftm
-    spcTiff(mouse, date, run, 'server', p.server, 'user', p.user, 'slice',...
-        p.slice, 'cdigit', p.cdigit, 'photons', redotiffphotons, 'tm', redotifftm);
+% Make sure that the base tm tiff file is still around
+if doiem
+    if ~exist(fullfile(spcpaths.fp_out,spcpaths.tif_iem), 'file')
+        disp('No IEM tiff file.')
+        doiem = false;
+    end
 end
 
 %% Register
@@ -145,6 +145,9 @@ if dophotons || dotm
     im_photon = readtiff(fullfile(spcpaths.fp_out, spcpaths.tif_photons));
     if dotm
         im_tm = readtiff(fullfile(spcpaths.fp_out, spcpaths.tif_tm));
+    end
+    if dotm
+        im_iem = readtiff(fullfile(spcpaths.fp_out, spcpaths.tif_iem));
     end
     
     % Binning
@@ -257,6 +260,17 @@ if dophotons || dotm
             % Write
             if i_iter == p.iterations
                 writetiff(im_tm, fullfile(spcpaths.fp_out,spcpaths.regtif_tm), 'double');
+            end
+        end
+        
+        % Apply shifts to IEM data
+        if doiem
+            % Apply shifts
+            [~,im_iem]=stackRegisterMA_RR(im_iem, [], [], xy_shifts);
+
+            % Write
+            if i_iter == p.iterations
+                writetiff(im_iem, fullfile(spcpaths.fp_out,spcpaths.regtif_iem), 'double');
             end
         end
     end

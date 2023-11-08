@@ -21,14 +21,23 @@ addOptional(p, 'force', false); % Force overwrite or not
 % Crop
 addOptional(p, 'crop', []);
 
+% Bin xy
+addOptional(p, 'binxy', 1); % This bin determins the spatial resolution of the frame. 
+                            % By default, the SPCimage analysis pipeline
+                            % always have a binxy of 1. But that's slow
+                            % for IEM so now you can bin the frame before
+                            % the tau bin. Note that a binxy of 2 an a
+                            % bin_tm of 3, means an overall bin of 6.
+
+
 % Time domain: tm and iem
 addOptional(p, 'tbins', 256); % Time bins
 addOptional(p, 'tcycle', 12500); % in ps
 addOptional(p, 'T1', 21); % data before this is not considered for tm and iem
 addOptional(p, 'T2', 240); % data after this is not considered for tm and iem
 addOptional(p, 'threshold', 5); % Peak has to be above this number for tm and iem considerations
-addOptional(p, 'bin_tm', 5); % Square binning for tm calculation. Edge 2x+1
-addOptional(p, 'bin_iem', 5); % Square binning for tm calculation. Edge 2x+1
+addOptional(p, 'bin_tm', 5); % Square binning for tm calculation. Edge 2x+1. This is spatial binning on top of binxy.
+addOptional(p, 'bin_iem', 5); % Square binning for tm calculation. Edge 2x+1. This is spatial on top of binxy.
 
 % Resize (Cropping at loading stage)
 addOptional(p, 'resizedim', [512 1250]);
@@ -201,6 +210,7 @@ for ind = spcpaths.cinds
     end
     t = toc;
     fprintf('Loaded Frame %i in %0.2f s.', ind, t);
+    tic;
     
     % Crop
     if ind == 1 && isempty(p.crop)
@@ -220,6 +230,11 @@ for ind = spcpaths.cinds
             'EdgeColor','g', 'LineWidth',2)
     end
     mov = mov(p.crop(2):p.crop(4), p.crop(1):p.crop(3), :);
+    
+    % XY bin
+    if p.binxy > 1
+        mov = binxy(mov, p.binxy) * (p.binxy^2);
+    end
     sz = size(mov);
     
     % Initialize
