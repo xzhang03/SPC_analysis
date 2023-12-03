@@ -103,6 +103,10 @@ spcpaths.loadparams = sprintf('%s_%s_%s%i_loadparams.mat', date, mouse, RunOrSli
 spcpaths.peek = sprintf('%s_%s_%s%i_peek.mat', date, mouse, RunOrSlice, ...
     run);
 
+% Registered Sparse Matrix Compression file
+spcpaths.smcreg = sprintf('%s_%s_%s%i_%s_smcreg.mat', date, mouse, RunOrSlice, run,...
+    cstring);
+
 % Tm output files
 spcpaths.tif_tm = sprintf('%s_%s_%s%i_tm.tif', date, mouse, RunOrSlice, ...
     run);
