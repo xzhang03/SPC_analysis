@@ -15,7 +15,7 @@ addOptional(p, 'sourcetype', 'registered'); % Can be 'raw', 'reigstered', 'warpe
 addOptional(p, 'force', false); % Force overwrite or not
 
 % Spatial filter variables
-addOptional(p, 'usemean', false); % Use mean instead of median (better for low photon counts)
+addOptional(p, 'usemean', true); % Use mean instead of median (better for low photon counts)
 addOptional(p, 'uselocalnorm', true);
 addOptional(p, 'hp_norm_sigmas', [8, 30], @isnumeric); % Sigma for gaussian fit
 addOptional(p, 'medfilt2size', [2 2]); % Neighbor area for 2D median filter

@@ -1,5 +1,5 @@
-function spcSMCReg(mouse, date, run, varargin)
-% spcSMCReg register from SMC compressed data. This is XY reg only
+function spcSMCDemreg(mouse, date, run, varargin)
+% spcSMCDemreg applies demonsreg to SMC files
 
 %% Parse inputs
 p = inputParser;
@@ -11,17 +11,20 @@ addOptional(p, 'slice', false); % Flag if data is slice
 addOptional(p, 'cdigit', 1); % Digits used for the "c" components in the file names (1, 2, or 3)
 
 % File variables
-addOptional(p, 'crop', []); % Crop
+addOptional(p, 'sourcetype', 'smcreg'); % can be smcreg or smc
+addOptional(p, 'crop', []); % Crop large FLIM images. Auto detected if source is smcreg
 addOptional(p, 'force', false); % Force overwrite or not
 addOptional(p, 'savephotons', true); % Output photons
+addOptional(p, 'savesmc', true); % Output smcs
 addOptional(p, 'outputbinxy', 2); % Output image binxy
 
 % Spatial filter variables
-addOptional(p, 'previewlocalnorm', true);
+addOptional(p, 'previewlocalnorm', false);
 addOptional(p, 'hp_norm_sigmas', [8, 30], @isnumeric); % Sigma for gaussian fit
 addOptional(p, 'medfilt2size', [2 2]); % Neighbor area for 2D median filter
 
 % Registration variables
+addOptional(p, 'edges', [0 0 0 0]); % Edge values
 addOptional(p, 'binxy', 1); % Binning
 addOptional(p, 'refrange', []); % Specify first and last frame numbers, leave empty to us all
 addOptional(p, 'iterations', 1); % Repeated iterations
@@ -72,7 +75,7 @@ end
 
 %% Check tiffs
 % Redo reg SMC or not
-if exist(fullfile(spcpaths.fp, sprintf(spcpaths.smcreg, 1)), 'file')
+if exist(fullfile(spcpaths.fp, sprintf(spcpaths.smcdemreg, 1)), 'file')
     % File already exists
     if p.force
         % Force redo
@@ -91,7 +94,7 @@ end
     
 % Redo photons or not
 if p.savephotons
-    if exist(fullfile(spcpaths.fp_out,spcpaths.regtif_photons), 'file')
+    if exist(fullfile(spcpaths.fp_out,spcpaths.demregtif_photons), 'file')
         % File already exists
         if p.force
             % Force redo
@@ -126,8 +129,11 @@ for i = 1 : n
     if mod(i,5) == 0
         waitbar(i/n, hwait, sprintf('Loading smc %i/%i', i, n));
     end
-    loaded = load(fullfile(spcpaths.fp, sprintf(spcpaths.smc, i)), '-mat');
+    loaded = load(fullfile(spcpaths.fp, sprintf(spcpaths.(p.sourcetype), i)), '-mat');
     smccell{i} = loaded.smc;
+    if i == 1
+        p.crop = loaded.crop;
+    end
 end
 close(hwait);
 t = toc;
@@ -155,7 +161,7 @@ for iter = 1 : p.iterations
     
     %% Crop
     dim = size(imref);
-    if iter == 1 && isempty(p.crop)
+    if iter == 1 && isempty(p.crop) && strcmpi(p.sourcetype, 'smc')
         figure
         imshow(sum(imref,3),[]);
         title('Cropping.')
@@ -166,13 +172,27 @@ for iter = 1 : p.iterations
         p.crop(2) = max(p.crop(2),1);
         disp(p.crop);
         close(gcf)
-    elseif iter == 1
+    elseif iter == 1 && strcmpi(p.sourcetype, 'smc')
         figure
         imshow(imref,[]);
         rectangle('Position', [p.crop(1) p.crop(2) p.crop(3)-p.crop(1) p.crop(4)-p.crop(2)],...
             'EdgeColor','g', 'LineWidth',2)
     end
     imref = imref(p.crop(2):p.crop(4), p.crop(1):p.crop(3));
+    [rows, cols] = size(imref);
+    
+    %% Apply edge
+    if any(p.edges ~= 0)
+        % Reference
+        imref = imref(p.edges(3)+1:end-p.edges(4), p.edges(1)+1:end-p.edges(2), :);
+
+        if mod(size(imref,2), p.binxy) ~= 0 || mod(size(imref,1), p.binxy) ~= 0
+            fprintf('Wrong edge values.\n')
+            fprintf('Residual in the first two values: %i.\n', mod(size(imref,2),p.binxy));
+            fprintf('Residual in the last two values: %i.\n', mod(size(imref,1), p.binxy));
+            return;
+        end
+    end
     
     %% Bin ref
     if p.binxy > 1
@@ -191,25 +211,12 @@ for iter = 1 : p.iterations
     imshow(imref,[]);
     title(sprintf('Iteration %i', iter));
     
-    %% Get a focus area
-    if iter == 1
-        % Get a focus area for calculating shifts
-        figure
-        imshow(imref,[]);
-        title('Focus area.')
-        h = imrect;
-        regfocus = wait(h);
-        regfocus = round(regfocus);
-        close(gcf)
-        regfocus2 = [regfocus(2), regfocus(2) + regfocus(4) - 1, regfocus(1), regfocus(1) + regfocus(3) - 1];
-    end
-    imref = imref(regfocus2(1) : regfocus2(2), regfocus2(3) : regfocus2(4));
-    
     %% Register
     tic;
     fprintf('Registering... ');
-    hwait = waitbar(0, sprintf('Registering frame %i/%i', 1, n));
+    hwait = waitbar(0, sprintf('Registering frame%i/%i', 1, n));
     for iframe = 1 : n
+        
         % Update wait bar
         if mod(iframe, 5) == 0
             waitbar(iframe/n, hwait, sprintf('Registering frame %i/%i', iframe, n));
@@ -218,20 +225,40 @@ for iter = 1 : p.iterations
         % Preprocess frame
         frame = spcSMCphotonframe(smccell{iframe});
         frame_c = frame(p.crop(2):p.crop(4), p.crop(1):p.crop(3));
+        frame_ce = frame_c(p.edges(3)+1:end-p.edges(4), p.edges(1)+1:end-p.edges(2), :);
         if p.binxy > 1
-            frame_c = binxy(frame_c, p.binxy);
+            frame_ce = binxy(frame_ce, p.binxy);
         end
-        frame_cln = localnormalizecore(frame_c, p.hp_norm_sigmas, p.medfilt2size);
-        frame_clnf = frame_cln(regfocus2(1) : regfocus2(2), regfocus2(3) : regfocus2(4));
+        frame_cebln = localnormalizecore(frame_ce, p.hp_norm_sigmas, p.medfilt2size);
+
+        % Demons reg
+        [D,~] = imregdemons(frame_cebln, imref, [32 16 8 4],...
+                    'AccumulatedFieldSmoothing',2.5,'PyramidLevels',4,'DisplayWaitbar',false);
+               
+        % resize back if necessary
+        if p.binxy > 1
+            D = imresize(p.binxy * D, p.binxy); % resize to bring back to full size of movie
+        end
+        D = floor(D);
         
-        % Register
-        [xy_shifts,~] = stackRegisterMA_RR(frame_clnf, imref, 100, [], 0);
+        % Re-embed D-combined into the full-size version if using edges
+        if any(p.edges ~= 0)
+            D_full = zeros(rows, cols, 2);
+            D_full(p.edges(3)+1:end-p.edges(4), p.edges(1)+1:end-p.edges(2), :) = D;
+            
+            % Use the new D_combined for subsequent processing
+            D = D_full;
+        end
         
-        % Apply shifts to smc
-        rplus = round(xy_shifts(3) * p.binxy);
-        cplus = round(xy_shifts(4) * p.binxy);
+        % Reapply crop to make the shift full size
+        D_full = zeros(dim(1), dim(2), 2);
+        D_full(p.crop(2):p.crop(4), p.crop(1):p.crop(3),:) = D;
         
-        % smc
+        % Get D1 and D2
+        D1 = D_full(:,:,1);
+        D2 = D_full(:,:,2);
+        
+        % Apply to smc
         smctemp = smccell{iframe};
         for ind = 1 : length(smctemp)
             % Skip empty frames
@@ -239,9 +266,18 @@ for iter = 1 : p.iterations
                 continue;
             end
             
-            % Shift
-            r = smctemp(ind).r + rplus;
-            c = smctemp(ind).c + cplus;
+            % Get r and c
+            r = double(smctemp(ind).r);
+            c = double(smctemp(ind).c);
+            li = r + (c-1) * dim(1);
+            
+            % Get shifts
+            rminus = D2(li);
+            cminus = D1(li);
+            
+            % Apply shifts
+            r = r - rminus;
+            c = c - cminus;
             
             % Wrap around
             r(r < 1) = r(r < 1) + dim(1);
@@ -250,20 +286,21 @@ for iter = 1 : p.iterations
             c(c > dim(2)) = c(c > dim(2)) - dim(2);
             
             % Put back
-            smctemp(ind).r = r;
-            smctemp(ind).c = c;
+            smctemp(ind).r = uint32(r);
+            smctemp(ind).c = uint32(c);
         end
         smccell{iframe} = smctemp;
     end
     close(hwait);
     t = toc;
     fprintf('Done. %0.1f s.\n', t);
+        
 end
 
 %% Save files
 tic;
 fprintf('Saving smcs... ');
-hwait = waitbar(0, sprintf('Saving frame%i/%i', 1, n));
+hwait = waitbar(0, sprintf('Saving frame %i/%i', 1, n));
 for iframe = 1 : n
     % Update wait bar
     if mod(iframe, 5) == 0
@@ -273,7 +310,7 @@ for iframe = 1 : n
     % SMC
     if dosmc
         savestruct = struct('smc', smccell{iframe}, 'crop', p.crop); %#ok<NASGU>
-        save(fullfile(spcpaths.fp, sprintf(spcpaths.smcreg,iframe)), '-struct', 'savestruct');
+        save(fullfile(spcpaths.fp, sprintf(spcpaths.smcdemreg,iframe)), '-struct', 'savestruct');
     end
     
     % Decompress
@@ -303,6 +340,8 @@ fprintf('Done. %0.1f s.\n', t);
 
 if dophotons
     % Write
-    writetiff(im_photon, fullfile(spcpaths.fp_out,spcpaths.regtif_photons), 'double');
+    writetiff(im_photon, fullfile(spcpaths.fp_out,spcpaths.demregtif_photons), 'double');
 end
+
 end
+

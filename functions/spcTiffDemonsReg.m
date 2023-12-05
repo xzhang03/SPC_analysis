@@ -167,8 +167,9 @@ for iter = 1 : p.iterations
     %% Reference
     if dophotons || dotm
         % Reference
-        ref = median(im_photon,3);
-
+%         ref = median(im_photon,3);
+        ref = mean(im_photon,3);
+        
         % Apply edge
         if any(p.edges ~= 0)
             % Reference
