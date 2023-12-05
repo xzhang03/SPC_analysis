@@ -17,6 +17,7 @@ addOptional(p, 'force', false); % Force overwrite or not
 % Spatial filter variables
 addOptional(p, 'usemean', true); % Use mean instead of median (better for low photon counts)
 addOptional(p, 'uselocalnorm', true);
+addOptional(p, 'previewlocalnorm', false);
 addOptional(p, 'hp_norm_sigmas', [8, 30], @isnumeric); % Sigma for gaussian fit
 addOptional(p, 'medfilt2size', [2 2]); % Neighbor area for 2D median filter
 
@@ -125,14 +126,18 @@ if dophotons
     
     im(isnan(im)) = 0;
     
-    % 2D Median filter
-    if ~isempty(p.medfilt2size)
-        % Apply median filter to reference
-        im = medfilt2(im, p.medfilt2size, 'symmetric');
-    end
     
     % Local normalize
     if p.uselocalnorm
+        % Preview
+        if p.previewlocalnorm
+            lnparas = localnormalize_ui('im', im, 'gausssizes', p.hp_norm_sigmas, 'parametermode', true);
+            p.hp_norm_sigmas = lnparas([2,1]);
+        end
+        
+        % Apply median filter to reference
+        im = medfilt2(im, p.medfilt2size, 'symmetric');
+        
         im_prime = single(im)-single(imgaussfilt(double(im), p.hp_norm_sigmas(1)));
         im = im_prime ./ (imgaussfilt(im_prime.^2, p.hp_norm_sigmas(2)) .^ (1/2));
         im(isnan(im)) = 0;
