@@ -50,7 +50,8 @@ if isempty(p.user)
             p.user = 'hakan';
         case 'YL'
             p.user = 'yoav';
-            
+        case 'MP'
+            p.user = 'marta';            
     end
 end
 
@@ -84,25 +85,36 @@ if dophotons
     switch p.sourcetype
         case 'raw'
             fp_photon = fullfile(spcpaths.fp_out, spcpaths.tif_photons);
+            im_photon = readtiff(fp_photon);
         case 'registered'
             fp_photon = fullfile(spcpaths.fp_out, spcpaths.regtif_photons);
+            im_photon = readtiff(fp_photon);
         case 'warped'
             fp_photon = fullfile(spcpaths.fp_out, spcpaths.warptif_photons);
+            im_photon = readtiff(fp_photon);
         case 'demonsreg'
             fp_photon = fullfile(spcpaths.fp_out, spcpaths.demregtif_photons);
+            im_photon = readtiff(fp_photon);
+        otherwise
+            [smcstruct, n, smccrop] = spcSMCLoad(mouse, date, run, 'server', p.server, 'user', p.user,...
+                'slice', p.slice, 'cdigit', p.cdigit, 'sourcetype', p.sourcetype, 'output', 'struct');
+            im_photon = spcSMCphotonframe(smcstruct, 'combined', true, 'crop', smccrop);
     end
     
-    % Read
-    im_photon = readtiff(fp_photon);
 end
 
 %% Make image
 if dophotons
     % Reference
-    if p.usemean
-        im = mean(im_photon,3);
+    if size(im_photon,3) > 1
+        if p.usemean
+            im = mean(im_photon,3);
+        else
+            im = median(double(im_photon),3);
+        end
     else
-        im = median(im_photon,3);
+        % im_photon is a sum
+        im = double(im_photon) / n;
     end
     
     % Save a unfiltered copy

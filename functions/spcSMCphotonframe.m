@@ -11,6 +11,9 @@ p = inputParser;
 addOptional(p, 'frames', []); % Leave empty to use all
 addOptional(p, 'combined', false); % Combine all the frames into 1 if true
 
+% Crop
+addOptional(p, 'crop', []);
+
 % Unpack if needed
 if iscell(varargin) && size(varargin,1) * size(varargin,2) == 1
     varargin = varargin{:};
@@ -90,3 +93,8 @@ for i = 1 : fmax
     frames(:,:,ind) = f;
 end
 
+%% Crop
+if ~isempty(p.crop)
+    frames = frames(p.crop(2):p.crop(4), p.crop(1):p.crop(3), :);
+end
+end

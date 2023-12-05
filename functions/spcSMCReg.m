@@ -61,14 +61,6 @@ end
 % Get paths
 spcpaths = spcPath(mouse, date, run, 'server', p.server, 'user', p.user,...
     'slice', p.slice, 'cdigit', p.cdigit);
-n = spcpaths.n;
-
-% Reference frames
-if ~isempty(p.refrange)
-    ind_ref = p.refrange;
-else
-    ind_ref = 1 : n;
-end
 
 %% Check tiffs
 % Redo reg SMC or not
@@ -117,21 +109,18 @@ if ~dosmc && ~dophotons
 end
 
 %% Reading
-% Initialize cell
-tic;
-fprintf('Loading smcs... ');
-smccell = cell(n,1);
-hwait = waitbar(0, sprintf('Loading smc %i/%i', 1, n));
-for i = 1 : n
-    if mod(i,5) == 0
-        waitbar(i/n, hwait, sprintf('Loading smc %i/%i', i, n));
-    end
-    loaded = load(fullfile(spcpaths.fp, sprintf(spcpaths.smc, i)), '-mat');
-    smccell{i} = loaded.smc;
+[smccell, n, smccrop] = spcSMCLoad(mouse, date, run, 'server', p.server, 'user', p.user,...
+    'slice', p.slice, 'cdigit', p.cdigit, 'sourcetype', 'smc', 'output', 'cell');
+if ~isempty(smccrop)
+    p.crop = smccrop;
 end
-close(hwait);
-t = toc;
-fprintf('Done. %0.1f s.\n', t);
+
+% Reference frames
+if ~isempty(p.refrange)
+    ind_ref = p.refrange;
+else
+    ind_ref = 1 : n;
+end
 
 %% Loop through iterations
 for iter = 1 : p.iterations

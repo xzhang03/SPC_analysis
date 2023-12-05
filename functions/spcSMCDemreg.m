@@ -64,14 +64,6 @@ end
 % Get paths
 spcpaths = spcPath(mouse, date, run, 'server', p.server, 'user', p.user,...
     'slice', p.slice, 'cdigit', p.cdigit);
-n = spcpaths.n;
-
-% Reference frames
-if ~isempty(p.refrange)
-    ind_ref = p.refrange;
-else
-    ind_ref = 1 : n;
-end
 
 %% Check tiffs
 % Redo reg SMC or not
@@ -120,24 +112,18 @@ if ~dosmc && ~dophotons
 end
 
 %% Reading
-% Initialize cell
-tic;
-fprintf('Loading smcs... ');
-smccell = cell(n,1);
-hwait = waitbar(0, sprintf('Loading smc %i/%i', 1, n));
-for i = 1 : n
-    if mod(i,5) == 0
-        waitbar(i/n, hwait, sprintf('Loading smc %i/%i', i, n));
-    end
-    loaded = load(fullfile(spcpaths.fp, sprintf(spcpaths.(p.sourcetype), i)), '-mat');
-    smccell{i} = loaded.smc;
-    if i == 1
-        p.crop = loaded.crop;
-    end
+[smccell, n, smccrop] = spcSMCLoad(mouse, date, run, 'server', p.server, 'user', p.user,...
+    'slice', p.slice, 'cdigit', p.cdigit, 'sourcetype', p.sourcetype, 'output', 'cell');
+if ~isempty(smccrop)
+    p.crop = smccrop;
 end
-close(hwait);
-t = toc;
-fprintf('Done. %0.1f s.\n', t);
+
+% Reference frames
+if ~isempty(p.refrange)
+    ind_ref = p.refrange;
+else
+    ind_ref = 1 : n;
+end
 
 %% Loop through iterations
 for iter = 1 : p.iterations
@@ -216,10 +202,14 @@ for iter = 1 : p.iterations
     fprintf('Registering... ');
     hwait = waitbar(0, sprintf('Registering frame%i/%i', 1, n));
     for iframe = 1 : n
+        if iter == 1 && iframe == 1
+            [xx, yy] = meshgrid(1:dim(2), 1:dim(1));
+        end
         
         % Update wait bar
         if mod(iframe, 5) == 0
-            waitbar(iframe/n, hwait, sprintf('Registering frame %i/%i', iframe, n));
+            t = toc;
+            waitbar(iframe/n, hwait, sprintf('Registering frame %i/%i, %0.1f s/frame', iframe, n, t/iframe));
         end
         
         % Preprocess frame
@@ -258,6 +248,16 @@ for iter = 1 : p.iterations
         D1 = D_full(:,:,1);
         D2 = D_full(:,:,2);
         
+        % Calculate pixel-wise shifts
+        D1_shift = D1 + xx;
+        D2_shift = D2 + yy;
+        
+        % Linear indexing
+        li_shift = (D1_shift-1)*dim(1) + D2_shift;
+        li_shift_c = reshape(li_shift(p.crop(2):p.crop(4), p.crop(1):p.crop(3),:), [rows*cols, 1]);
+        li_full = (xx-1)*dim(1) + yy;
+        li_full_c = reshape(li_full(p.crop(2):p.crop(4), p.crop(1):p.crop(3),:), [rows*cols, 1]);
+        
         % Apply to smc
         smctemp = smccell{iframe};
         for ind = 1 : length(smctemp)
@@ -266,20 +266,49 @@ for iter = 1 : p.iterations
                 continue;
             end
             
-            % Get r and c
+            % Get r and c and v
             r = double(smctemp(ind).r);
             c = double(smctemp(ind).c);
+            v = full(smctemp(ind).v) + 1;
             li = r + (c-1) * dim(1);
             
-            % Get shifts
-            rminus = D2(li);
-            cminus = D1(li);
+            % Initialize new
+            r_new = zeros(length(r),1);
+            c_new = zeros(length(c),1);
+            v_new = zeros(length(v),1);
             
-            % Apply shifts
-            r = r - rminus;
-            c = c - cminus;
+            % Loop through linear index to find out how many times a pixel
+            % has been used
+            li_ind_new = 0;
             
-            % Wrap around
+            % Narrow down search space to save time
+            memix = ismember(li_shift_c, li);
+            li_shift_c2 = li_shift_c(memix);
+            li_full_c2 = li_full_c(memix);
+            for li_ind = 1 : length(li)
+                % Get index and see if it's used
+                li_temp = li(li_ind);
+                inds_temp = find(li_shift_c2 == li_temp);
+                
+                % Skip if not used
+                if isempty(inds_temp)
+                    continue;
+                end
+                
+                % Put in new array
+                li_temp_n = length(inds_temp);
+                r_new(li_ind_new+1 : li_ind_new+li_temp_n) = mod(li_full_c2(inds_temp), dim(1));
+                c_new(li_ind_new+1 : li_ind_new+li_temp_n) = floor(li_full_c2(inds_temp)/dim(1));
+                v_new(li_ind_new+1 : li_ind_new+li_temp_n) = v(li_ind);
+                li_ind_new = li_ind_new + li_temp_n;
+            end
+             
+            % Rename and trim
+            r = r_new(1:li_ind_new);
+            c = c_new(1:li_ind_new);
+            v = v_new(1:li_ind_new);
+
+            % Wrap around (is this a good idea even?)
             r(r < 1) = r(r < 1) + dim(1);
             r(r > dim(1)) = r(r > dim(1)) - dim(1);
             c(c < 1) = c(c < 1) + dim(2);
@@ -288,6 +317,7 @@ for iter = 1 : p.iterations
             % Put back
             smctemp(ind).r = uint32(r);
             smctemp(ind).c = uint32(c);
+            smctemp(ind).v = sparse(v-1);
         end
         smccell{iframe} = smctemp;
     end
