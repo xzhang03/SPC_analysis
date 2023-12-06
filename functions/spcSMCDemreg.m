@@ -315,9 +315,10 @@ for iter = 1 : p.iterations
             c(c > dim(2)) = c(c > dim(2)) - dim(2);
             
             % Put back
-            smctemp(ind).r = uint32(r);
-            smctemp(ind).c = uint32(c);
+            smctemp(ind).r = uint16(r);
+            smctemp(ind).c = uint16(c);
             smctemp(ind).v = sparse(v-1);
+            smctemp(ind).size(5) = li_ind_new;
         end
         smccell{iframe} = smctemp;
     end
