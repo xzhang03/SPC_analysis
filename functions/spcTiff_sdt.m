@@ -39,15 +39,25 @@ addOptional(p, 'threshold', 5); % Peak has to be above this number for tm and ie
 addOptional(p, 'bin_tm', 5); % Square binning for tm calculation. Edge 2x+1. This is spatial binning on top of binxy.
 addOptional(p, 'bin_iem', 5); % Square binning for tm calculation. Edge 2x+1. This is spatial on top of binxy.
 
+% Time domain: IEM99 (using 99th percentile instead of max for IEM peak
+% estimates)
+addOptional(p, 'iem99', false);
+addOptional(p, 'iempercentile', 99);
+
 % Resize (Cropping at loading stage)
 addOptional(p, 'resizedim', [512 1250]);
 
 % Compress
 addOptional(p, 'compress', true); % First time it will make compression file, later reading it
+addOptional(p, 'smctype', ''); % Leave empty to use sdt or smc. Specify for smcreg or smcdemreg
 
 % IRF
 addOptional(p, 'deconvforiem', false); % If set true it takes 10x as long
 addOptional(p, 'irf', [882; 6176; 15000; 15000; 3529]);
+
+% Live preview
+addOptional(p, 'livepreview', true);
+addOptional(p, 'previewim', 'iem');
 
 % Unpack if needed
 if iscell(varargin) && size(varargin,1) * size(varargin,2) == 1
@@ -184,22 +194,34 @@ end
 
 
 %% Load
-hwait = waitbar(0);
+hwait = waitbar(0, sprintf('Processing %s %s run%i: %i/%i r%i', mouse, date, run, 1, spcpaths.n, 0));
 for ind = spcpaths.cinds
-    % Load movie
+    %% Load movie
     tic
-    if p.compress
-        usesmc = exist(fullfile(spcpaths.fp, sprintf(spcpaths.smc,ind)), 'file');
+    if isempty(p.smctype)
+        if p.compress
+            usesmc = exist(fullfile(spcpaths.fp, sprintf(spcpaths.smc,ind)), 'file');
+            p.smctype = 'smc';
+        else
+            usesmc = false;
+        end
     else
-        usesmc = false;
+        usesmc = true;
     end
     
     if usesmc
         % Load sparse matrix compression file
-        smc = load(fullfile(spcpaths.fp, sprintf(spcpaths.smc,ind)), "-mat");
-        smc = smc.smc;
+        loaded = load(fullfile(spcpaths.fp, sprintf(spcpaths.(p.smctype),ind)), "-mat");
+        if ind == 1 && isfield(loaded, 'crop')
+            if ~isempty(loaded.crop)
+                p.crop = loaded.crop;
+            end
+        end
+        
+        smc = loaded.smc;
         mov = spcDecompress(smc);
     else
+        % Load sdt
         mov = spcLoadsdt(fullfile(spcpaths.fp, sprintf(spcpaths.sdt_in,ind)), 'crop', p.resizedim);
 
         if p.compress
@@ -212,7 +234,7 @@ for ind = spcpaths.cinds
     fprintf('Loaded Frame %i in %0.2f s.', ind, t);
     tic;
     
-    % Crop
+    %% Crop
     if ind == 1 && isempty(p.crop)
         figure
         imshow(sum(mov,3),[]);
@@ -231,13 +253,13 @@ for ind = spcpaths.cinds
     end
     mov = mov(p.crop(2):p.crop(4), p.crop(1):p.crop(3), :);
     
-    % XY bin
+    %% XY bin
     if p.binxy > 1
         mov = binxy(mov, p.binxy) * (p.binxy^2);
     end
     sz = size(mov);
     
-    % Initialize
+    %% Initialize
     if dophotons
         curr_photon = sum(mov,3);
     end
@@ -249,9 +271,9 @@ for ind = spcpaths.cinds
     end
     
     
-    % Time processing
+    %% Time processing
     for r = 1 : sz(1)
-        if mod(r,100) == 0
+        if mod(r,50) == 0
             waitbar(ind/spcpaths.n, hwait, sprintf('Processing %s %s run%i: %i/%i r%i', mouse, date, run, ind, spcpaths.n, r));
         end
         
@@ -278,7 +300,13 @@ for ind = spcpaths.cinds
                     if p.deconvforiem
                         trace = deconvlucy(trace,p.irf);
                     end
-                    curr_iem(r,c) = sum(trace) / max(trace) * tres;
+                    
+                    if p.iem99
+                        % IEM 99
+                        curr_iem(r,c) = sum(trace) / prctile(trace, p.iempercentile) * tres;
+                    else
+                        curr_iem(r,c) = sum(trace) / max(trace) * tres;
+                    end
                 else
                     curr_iem(r,c) = 0;
                 end
@@ -288,7 +316,7 @@ for ind = spcpaths.cinds
     t = toc;
     fprintf(' Processing %0.2f s.\n', t);
     
-    % Repmat
+    %% Repmat and save
     if ind == 1
         % Initialize if the first frame
         if dophotons
@@ -311,21 +339,88 @@ for ind = spcpaths.cinds
             im_iem(:,:,ind) = curr_iem;
         end
     end
+    
+    %% Preview
+    if p.livepreview
+        if ind == 1
+            % New figure
+            figure;
+            
+            % Show
+            switch p.previewim
+                case 'photons'
+                    him = imshow(curr_photon, []);
+                case 'tm'
+                    him = imshow(curr_tm, []);
+                case 'iem'
+                    him = imshow(curr_iem, []);
+            end
+        else
+            % Update
+            switch p.previewim
+                case 'photons'
+                    him.CData = curr_photon;
+                    him.Parent.CLim(2) = max(curr_photon(:));
+                case 'tm'
+                    him.CData = curr_tm;
+                    him.Parent.CLim(2) = max(curr_tm(:));
+                case 'iem'
+                    him.CData = curr_iem;
+                    him.Parent.CLim(2) = max(curr_iem(:));
+            end
+        end
+        
+        title(sprintf('Preview %i/%i', ind, spcpaths.n))
+    end
 end
 close(hwait)
 
 %% Save
 if dophotons
     % Write
-    writetiff(im_photon, fullfile(spcpaths.fp_out,spcpaths.tif_photons), 'double');
+    switch p.smctype
+        case 'smcreg'
+            writetiff(im_photon, fullfile(spcpaths.fp_out,spcpaths.regtif_photons), 'double');
+        case 'smcdemreg'
+            writetiff(im_photon, fullfile(spcpaths.fp_out,spcpaths.demregtif_photons), 'double');
+        otherwise
+            writetiff(im_photon, fullfile(spcpaths.fp_out,spcpaths.tif_photons), 'double');
+    end
 end
 if dotm
     % Write
-    writetiff(im_tm, fullfile(spcpaths.fp_out,spcpaths.tif_tm), 'double');
+    switch p.smctype
+        case 'smcreg'
+            writetiff(im_tm, fullfile(spcpaths.fp_out,spcpaths.regtif_tm), 'double');
+        case 'smcdemreg'
+            writetiff(im_tm, fullfile(spcpaths.fp_out,spcpaths.demregtif_tm), 'double');
+        otherwise
+            writetiff(im_tm, fullfile(spcpaths.fp_out,spcpaths.tif_tm), 'double');
+    end
 end
 if doiem
     % Write
-    writetiff(im_iem, fullfile(spcpaths.fp_out,spcpaths.tif_iem), 'double');
+    if p.iem99
+        % IEM99
+        switch p.smctype
+            case 'smcreg'
+                writetiff(im_iem, fullfile(spcpaths.fp_out,spcpaths.regtif_iem99), 'double');
+            case 'smcdemreg'
+                writetiff(im_iem, fullfile(spcpaths.fp_out,spcpaths.demregtif_iem99), 'double');
+            otherwise
+                writetiff(im_iem, fullfile(spcpaths.fp_out,spcpaths.tif_iem99), 'double');
+        end
+    else
+        % Regular iem
+        switch p.smctype
+            case 'smcreg'
+                writetiff(im_iem, fullfile(spcpaths.fp_out,spcpaths.regtif_iem), 'double');
+            case 'smcdemreg'
+                writetiff(im_iem, fullfile(spcpaths.fp_out,spcpaths.demregtif_iem), 'double');
+            otherwise
+                writetiff(im_iem, fullfile(spcpaths.fp_out,spcpaths.tif_iem), 'double');
+        end
+    end
 end
 
 % Parameters
