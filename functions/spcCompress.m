@@ -62,7 +62,7 @@ for ttind = 1 : sz_in(4)
             smstruct(ind).r = [];
             smstruct(ind).c = [];
             smstruct(ind).v = [];
-            smstruct(ind).size = [sz_in(1), sz_in(2), sz_in(3), sz_in(4), 0];
+            smstruct(ind).size = uitn16([sz_in(1), sz_in(2), sz_in(3), sz_in(4), 0]);
             continue;
         end
         
