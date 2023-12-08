@@ -85,7 +85,11 @@ for i = 1 : fmax
         end
 
         for pind = 1 : length(r)
+%             try
             f(r(pind), c(pind)) =  f(r(pind), c(pind)) + uint16(v(pind));
+%             catch
+%                 disp();
+%             end
         end
     end
 
