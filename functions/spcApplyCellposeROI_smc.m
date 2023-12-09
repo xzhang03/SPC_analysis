@@ -271,6 +271,10 @@ fprintf('Done. %0.1f s.\n', t);
 
 
 %% Loop and calculate
+% Timer
+fprintf('Extracting traces... ')
+tic
+
 % Time resolution
 tres = p.tcycle / p.tbins;
 
@@ -331,6 +335,9 @@ for ii = 1 : nsections
     end
 end
 close(hwait)
+
+t = toc;
+fprintf('Done. %0.1f s.\n', t);
 
 %% Calculate changes
 for i = 1 : nrealcell
