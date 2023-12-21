@@ -286,7 +286,9 @@ tvec = (ivec - ivec(1)) * tres;
 % Apply filters
 hwait = waitbar(0, 'Extracting traces');
 for ii = 1 : nsections
-    waitbar(ii/nsections, hwait, sprintf('Extracting traces %i/%i', ii, nsections));
+    t = toc;
+    waitbar(ii/nsections, hwait, sprintf('Extracting %i/%i, %0.1f s/frame, %0.1f min left',...
+        ii, nsections, t/ii, (nsections - ii) * (t/ii) / 60));
     
     % Get movie
     im = spcDecompress(smccell{ii});
