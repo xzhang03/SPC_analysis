@@ -229,8 +229,8 @@ for iter = 1 : p.iterations
             end
             
             % Shift
-            r = uint16(smctemp(ind).r + rplus);
-            c = uint16(smctemp(ind).c + cplus);
+            r = smctemp(ind).r + rplus;
+            c = smctemp(ind).c + cplus;
             
             % Wrap around
             r(r < 1) = r(r < 1) + dim(1);

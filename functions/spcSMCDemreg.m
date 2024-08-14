@@ -304,9 +304,9 @@ for iter = 1 : p.iterations
             end
              
             % Rename and trim
-            r = uint16(r_new(1:li_ind_new));
-            c = uint16(c_new(1:li_ind_new));
-            v = double(v_new(1:li_ind_new));
+            r = r_new(1:li_ind_new);
+            c = c_new(1:li_ind_new);
+            v = v_new(1:li_ind_new);
 
             % Wrap around (is this a good idea even?)
             r(r < 1) = r(r < 1) + dim(1);

@@ -57,7 +57,7 @@ addOptional(p, 'irf', [882; 6176; 15000; 15000; 3529]);
 
 % Live preview
 addOptional(p, 'livepreview', true);
-addOptional(p, 'previewim', 'iem');
+addOptional(p, 'previewim', 'photons');
 
 % Unpack if needed
 if iscell(varargin) && size(varargin,1) * size(varargin,2) == 1
