@@ -1,5 +1,7 @@
 function smc = spcSMCcrop(smc, crop)
 % Crop smc as if it's a stack
+% crop is the top-left and bottom-right coordinates of the bounding box
+% [Xtl, Ytl, Xbr, Ybr]. X is the column number and Y is the row number.
 
 % SMC cell
 if iscell(smc)
@@ -47,7 +49,7 @@ for ii = 1 : ncell
         % Putback
         smc(i).r = uint16(r);
         smc(i).c = uint16(c);
-        smc(i).v = sparse(v-1);
+        smc(i).v = sparse(double(v-1));
     end
     
     if ncell > 1

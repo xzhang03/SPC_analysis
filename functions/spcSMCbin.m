@@ -20,7 +20,7 @@ else
 end
 
 % Get size
-sz = smc(1).size;
+sz = uint32(smc(1).size);
 sz_new = floor([sz(1)/xybin, sz(2)/xybin, sz(3)/tbin, sz(4), 0]);
 n = size(smc,1);
 
@@ -132,7 +132,7 @@ if tbin > 1
                 end
 
                 % Linear indexing
-                li = r + (c-1) * sz_new(1);
+                li = uint32(r) + uint32((c-1)) * sz_new(1);
 
                 % Find ones to merge
                 [~, ind_in, ind_out] = unique(li, 'stable');
@@ -157,6 +157,7 @@ if tbin > 1
                 end
 
                 % Put back
+                smc(istart).ind = ind_new;
                 smc(istart).v = sparse(v_new-1);
                 smc(istart).r = uint16(r_new);
                 smc(istart).c = uint16(c_new);

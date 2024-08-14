@@ -74,4 +74,13 @@ for ind = 1 : length(smstruct)
         mov(r(i),c(i),tind, ttind) = v(i);
     end
 end
+
+%% Report
+% Bytes
+sz = double(sz);
+MB_out = sz(1) * sz(2) * sz(3) * sz(4) * 2 / 1000000;
+MB_in = whos('smstruct');
+MB_in = MB_in.bytes / 1000000;
+fprintf('Decompressed from %0.1f MB to %0.1f MB (%0.0fx)\n', MB_in, MB_out, MB_out/MB_in);
+
 end
