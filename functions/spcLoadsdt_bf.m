@@ -8,6 +8,10 @@ if nargin < 3
     movdim = [511 1250];
     if nargin < 2
         rowinc = 2044.72;
+        if nargin < 1
+            [fn,fp] = uigetfile('F:\*.sdt');
+            fpath = fullfile(fp,fn);
+        end
     end
 end
 

@@ -17,6 +17,9 @@ addOptional(p, 'frommat', true); % Loda from mat if exists
 addOptional(p, 'autosave', false);
 addOptional(p, 'compress', true); % First time it will make compression file, later reading it
 
+% Read registered smc files if available
+addOptional(p, 'forcesmctype', ''); % Leave empty to be asked
+
 % Time domain: tm and iem
 addOptional(p, 'tbins', 256); % Time bins
 addOptional(p, 'tcycle', 12500); % in ps
@@ -95,6 +98,11 @@ tvec = (ivec - ivec(1)) * tres;
 % Get paths
 spcpaths = spcPath(mouse, date, run, 'server', p.server, 'user', p.user,...
     'slice', p.slice, 'cdigit', p.cdigit);
+
+if ~exist(spcpaths.fp, 'dir')
+    disp('Data path does not exist');
+    return;
+end
 
 % Automate cdigit
 if p.autoc
@@ -180,9 +188,39 @@ if donew
         end
 
         if usesmc
+            if isempty(p.forcesmctype)
+                % Determine if available
+                hasregsmc = exist(fullfile(spcpaths.fp, sprintf(spcpaths.smcreg,ind)), 'file');
+                hasdemregsmc = exist(fullfile(spcpaths.fp, sprintf(spcpaths.smcdemreg,ind)), 'file');
+                
+                if hasregsmc || hasdemregsmc
+                    if hasregsmc
+                        opt2 = 'smcreg';
+                    else
+                        opt2 = 'none';
+                    end
+                    if hasdemregsmc
+                        opt3 = 'smcdemreg';
+                    else
+                        opt3 = 'none';
+                    end
+                    
+                    % Choose
+                    answer = questdlg('Which smc file to load?', 'Choose smc', 'smc', opt2, opt3, 'smc');
+                    if strcmp(answer, 'none')
+                        error('Do not choose ''non''e as an smc type');
+                    end
+                    p.forcesmctype = answer;
+                end
+            end
+            
             % Load sparse matrix compression file
-            smc = load(fullfile(spcpaths.fp, sprintf(spcpaths.smc,ind)), "-mat");
+            smc = load(fullfile(spcpaths.fp, sprintf(spcpaths.(p.forcesmctype),ind)), "-mat");
             mov = spcDecompress(smc.smc);
+            
+            if strcmp(p.forcesmctype, 'smcreg') || strcmp(p.forcesmctype, 'smcdemreg')
+                p.crop = smc.crop;
+            end
         else
             mov = spcLoadsdt(fullfile(spcpaths.fp, sprintf(spcpaths.sdt_in,ind)));
             

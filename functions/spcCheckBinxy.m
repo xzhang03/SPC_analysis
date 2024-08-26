@@ -68,7 +68,7 @@ for ii = 1 : nframebins
         subplot(nframebins, nchecks, ind);
         t = spcMovtrace(im2, y2, x2, p.bins2check(i));
         plot(t);
-        title(sprintf('XY Bin = %i | Tau Bin = %i', p.binxy2check(ii), p.bins2check(i)));
+        title(sprintf('XY Bin = %i | Local Bin = %i', p.binxy2check(ii), p.bins2check(i)));
     end
 end
 

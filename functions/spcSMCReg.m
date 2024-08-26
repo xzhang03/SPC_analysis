@@ -252,7 +252,7 @@ end
 %% Save files
 tic;
 fprintf('Saving smcs... ');
-hwait = waitbar(0, sprintf('Saving frame%i/%i', 1, n));
+hwait = waitbar(0, sprintf('Saving frame %i/%i', 1, n));
 for iframe = 1 : n
     % Update wait bar
     if mod(iframe, 5) == 0
