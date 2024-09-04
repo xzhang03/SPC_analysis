@@ -220,11 +220,11 @@ for iter = 1 : p.iterations
             frame_ce = binxy(frame_ce, p.binxy);
         end
         frame_cebln = localnormalizecore(frame_ce, p.hp_norm_sigmas, p.medfilt2size);
-
+        
         % Demons reg
         [D,~] = imregdemons(frame_cebln, imref, [32 16 8 4],...
                     'AccumulatedFieldSmoothing',2.5,'PyramidLevels',4,'DisplayWaitbar',false);
-               
+              
         % resize back if necessary
         if p.binxy > 1
             D = imresize(p.binxy * D, p.binxy); % resize to bring back to full size of movie
@@ -257,7 +257,7 @@ for iter = 1 : p.iterations
         li_shift_c = reshape(li_shift(p.crop(2):p.crop(4), p.crop(1):p.crop(3),:), [rows*cols, 1]);
         li_full = (xx-1)*dim(1) + yy;
         li_full_c = reshape(li_full(p.crop(2):p.crop(4), p.crop(1):p.crop(3),:), [rows*cols, 1]);
-        
+         
         % Apply to smc
         smctemp = smccell{iframe};
         for ind = 1 : length(smctemp)
@@ -320,7 +320,7 @@ for iter = 1 : p.iterations
             smctemp(ind).v = sparse(v-1);
             smctemp(ind).size(5) = li_ind_new;
         end
-        smccell{iframe} = smctemp;
+        smccell{iframe} = smctemp; 
     end
     close(hwait);
     t = toc;
