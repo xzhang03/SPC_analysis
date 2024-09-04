@@ -1,4 +1,4 @@
-# spc_analysis
+# FLIM data analysis (SPC_analysis)
  FLIM data analysis in MATLAB, written for Becker & Hickl FLIM system.
  
  Written by Stephen Zhang and Hugo Fluhr
