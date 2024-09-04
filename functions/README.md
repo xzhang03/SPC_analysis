@@ -1,4 +1,4 @@
-## SMC function list
+## 1. SMC function list
 SMC is a FLIM data algorithm developed by Stephen to save a 3D/4D data matrix in a sparse matrix form. Compression rate is typically -98-99% depending on data density. Please see sample data folder in the main directory to see example compression and decompression results
 
 #### Apply SMC compression to 3d/4d FLIM data matrix:
@@ -51,7 +51,7 @@ smc = spcSMCcrop(smc, crop)
 frames = spcSMCphotonframe(smc, varargin)
 ```
 
-## Function list:
+## 2. Function list:
 
 #### Make neuropil ring based on defined inner and outer diameters (in pixels):
 ```Matlab
@@ -168,7 +168,7 @@ spcTiffWarp(mouse, date, varargin)
 spcTiff_sdt(mouse, date, run, varargin)
 ```
 
-## Obsolete functions
+## 3. Obsolete functions
 
 #### Apply ROI to pre-calculated photons/tm tiff stack (obsolete):
 ```Matlab
