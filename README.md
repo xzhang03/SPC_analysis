@@ -20,6 +20,6 @@ The main purpose of this repository is to provide a package to load and process 
 
 1. DistortionCorrection: Code to correct for image warping that is resulted from resonant scanning
 2. ExpFit: Code for GLM-based exponential fitting algorithm (not commonly used)
-3. Sample_data: Sample data to demonstrate the SMC (sparse-matrix compression algorithm)
+3. Sample_data: Sample data to demonstrate the SMC (sparse-matrix compression algorithm). Please see readme file within
 4. bfmatlab: bioformat support for matlab - for loading FLIP data
-5. functions: Main functions for FLIM analysis
+5. functions: Main functions for FLIM analysis (please see readme file)
