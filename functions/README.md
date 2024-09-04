@@ -70,7 +70,7 @@ spc7zip(mice, ziplevel, varargin)
 
 #### Performs area-under-curve analysis for data:
 ```Matlab
-function Areas = spcAUC(data)
+Areas = spcAUC(data)
 ```
 
 #### Apply cellpose-generated ROI to FLIM data and extract traces:
@@ -100,7 +100,7 @@ spcAutocrop(im, varargin)
 
 #### Check xy bins for image and for trace extraction in preparation for lifetime calculations:
 ```Matlab
-function spcCheckBinxy(mouse, date, run, varargin)
+spcCheckBinxy(mouse, date, run, varargin)
 ```
 
 #### Check expression level using intensity data:
