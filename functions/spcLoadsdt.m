@@ -33,7 +33,7 @@ parse(p, varargin{:});
 p = p.Results;
 
 %% Read headers
-fp=fopen(fpath, 'rb', 'ieee-le');
+fp = fopen(fpath, 'rb', 'ieee-le');
 
 % From Arnold Estrada
 % https://github.com/aestrada71/Arnold_Estrada_Matlab_Code/blob/master/read_sdt-1.m

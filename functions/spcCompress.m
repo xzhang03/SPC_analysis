@@ -38,7 +38,7 @@ elseif do4d
     smstruct = repmat(smstruct, [sz_in(3) * sz_in(4), 1]);
 end
 
-%% Loop through
+%% Loop through tbins
 ind = 0;
 for ttind = 1 : sz_in(4)
     for tind = 1 : sz_in(3)

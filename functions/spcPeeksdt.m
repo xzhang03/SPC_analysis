@@ -16,6 +16,7 @@ addOptional(p, 'frommat', true); % Loda from mat if exists
 % Compress
 addOptional(p, 'autosave', false);
 addOptional(p, 'compress', true); % First time it will make compression file, later reading it
+addOptional(p, 'gettmwhileload', false); % Get gross tm while loading, needs smc
 
 % Read registered smc files if available
 addOptional(p, 'forcesmctype', ''); % Leave empty to be asked
@@ -52,6 +53,9 @@ addOptional(p, 'pos', [50 500 1800 420]);
 addOptional(p, 'smoothwin', 3); % Change to 0 for no smoothing
 addOptional(p, 'tmLUT', [0 3500]);
 
+% Force continue
+addOptional(p, 'forcecontinue', false);
+
 % Unpack if needed
 if iscell(varargin) && size(varargin,1) * size(varargin,2) == 1
     varargin = varargin{:};
@@ -86,6 +90,10 @@ end
 fovtrace = [];
 ROItrace = [];
 
+if ~p.compress
+    p.gettmwhileload = false;
+end
+
 %% Time vectors
 % Time resolution
 tres = p.tcycle / p.tbins * p.bint;
@@ -100,7 +108,20 @@ spcpaths = spcPath(mouse, date, run, 'server', p.server, 'user', p.user,...
     'slice', p.slice, 'cdigit', p.cdigit);
 
 if ~exist(spcpaths.fp, 'dir')
-    disp('Data path does not exist');
+    disp('Run folder does not exist');
+    
+    % Check parent folders
+    folderchecks = dirparse(spcpaths.fp, 3);
+    if ~exist(folderchecks(1).path, 'dir')
+        disp('''FLIM'' folder does not exist');
+        if ~exist(folderchecks(2).path, 'dir')
+            disp('Day folder does not exist');
+            if ~exist(folderchecks(3).path, 'dir')
+                disp('Mouse folder does not exist');
+            end
+        end
+    end
+    
     return;
 end
 
@@ -121,7 +142,7 @@ end
 if p.frommat
     if exist(fullfile(spcpaths.fp_out, spcpaths.peek), 'file')
         % If not making plots stop here
-        if ~p.makeplot
+        if ~p.makeplot && ~p.forcecontinue
             fprintf('Not making new structs or new plots. Stopping here.\n');
             return;
         end
@@ -176,7 +197,11 @@ end
 if donew
     hwait = waitbar(0);
     for ind = spcpaths.cinds
-        waitbar(ind/spcpaths.n, hwait, sprintf('Processing %s %s run%i: %i/%i', mouse, date, run, ind, spcpaths.n));
+        if p.gettmwhileload && (ind > 1)
+            waitbar(ind/spcpaths.n, hwait, sprintf('Processing %s %s run%i: %i/%i, Tm: %0.1f', mouse, date, run, ind, spcpaths.n, tmpreview));
+        else
+            waitbar(ind/spcpaths.n, hwait, sprintf('Processing %s %s run%i: %i/%i', mouse, date, run, ind, spcpaths.n));
+        end
         
         % Load movie
         tic
@@ -211,12 +236,15 @@ if donew
                         error('Do not choose ''non''e as an smc type');
                     end
                     p.forcesmctype = answer;
+                else
+                    p.forcesmctype = 'smc';
                 end
             end
             
             % Load sparse matrix compression file
             smc = load(fullfile(spcpaths.fp, sprintf(spcpaths.(p.forcesmctype),ind)), "-mat");
-            mov = spcDecompress(smc.smc);
+            smc = smc.smc;
+            mov = spcDecompress(smc);
             
             if strcmp(p.forcesmctype, 'smcreg') || strcmp(p.forcesmctype, 'smcdemreg')
                 p.crop = smc.crop;
@@ -231,6 +259,20 @@ if donew
             end
         end
         t = toc;
+        
+        % Get tm while loading
+        if p.gettmwhileload
+            if ind == 1
+                vtm = zeros(p.tbins, 1);
+                ttm = (0.5 : 1 : p.tbins)' * p.tcycle / p.tbins;
+            end
+            
+            for previewind = 1 : p.tbins
+                vtm(previewind) = smc(previewind).size(5);
+            end
+            
+            tmpreview = sum(vtm .* ttm) / sum(vtm);
+        end
         fprintf('Loaded Frame %i in %0.2f s.', ind, t);
         
         % Cropping
@@ -350,7 +392,7 @@ if p.smoothwin > 0
 else
     hph = plot(photontrace);
 end
-title(sprintf('Photons'));
+title(sprintf('Photons: %0.1f', mean(photontrace)/sum(failmask(:) == 0)));
 
 % Tm
 subplot(1,npanels,6)
@@ -427,6 +469,10 @@ uicontrol(hpan,'Style','pushbutton','Position', vp5 - [0 60 0 0], 'String',...
 % Quit
 uicontrol(hpan,'Style','pushbutton','Position', vp5 - [0 80 0 0], 'String',...
     'Quit', 'callback', @quit);
+
+if p.autosave
+    savescreenshot();
+end
 
 %% Anonymous functions
     % Anonymous functions

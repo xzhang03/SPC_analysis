@@ -9,6 +9,7 @@ end
 
 p = inputParser;
 addOptional(p, 'type', 'uint16');
+addOptional(p, 'movcache', []); % Preload a cached empty matrix to improve performance. Make sure all entries are 0s!
 
 % Unpack if needed
 if iscell(varargin) && size(varargin,1) * size(varargin,2) == 1
@@ -27,11 +28,16 @@ if sz(4) == 1
 else
     do3d = false;
 end
-switch p.type
-    case 'uint8'
-        mov = uint8(zeros(sz));
-    case 'uint16'
-        mov = uint16(zeros(sz));
+
+if isempty(p.movcache)
+    switch p.type
+        case 'uint8'
+            mov = uint8(zeros(sz));
+        case 'uint16'
+            mov = uint16(zeros(sz));
+    end
+else
+    mov = p.movcache;
 end
 
 %% Loop and decompress
