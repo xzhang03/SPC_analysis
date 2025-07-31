@@ -9,7 +9,7 @@ end
 
 % Show the image
 figure( 101 ), imshow( inputim , [] );
-set(101,'Position',[50 50 1600 600])
+set(101,'Position', [50 50 1600 600])
 
 
 % Set the image title
